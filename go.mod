@@ -1,4 +1,4 @@
-module carzone
+module github.com/PrateekKumar15/CarZone
 
 go 1.24.3
 
