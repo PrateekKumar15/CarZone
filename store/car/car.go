@@ -115,7 +115,7 @@ func (s Store) CreateCar(ctx context.Context, carReq models.CarRequest) (models.
 	}()
 	query := `INSERT INTO car (id, name, year, brand, fuel_type, engine_id, price, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	RETURNING id, name, year, brand, fuel_type, engine_id, price, created_at, updated_at`
-		err = tx.QueryRowContext(ctx, query, newCar.ID, newCar.Name, newCar.Year, newCar.Brand, newCar.FuelType, engineID, newCar.Price, newCar.CreatedAt, newCar.UpdatedAt).Scan(&createdCar.ID, &createdCar.Name, &createdCar.Year, &createdCar.Brand, &createdCar.FuelType, &createdCar.Engine, &createdCar.Price, &createdCar.CreatedAt, &createdCar.UpdatedAt)
+		err = tx.QueryRowContext(ctx, query, newCar.ID, newCar.Name, newCar.Year, newCar.Brand, newCar.FuelType, newCar.Engine, newCar.Price, newCar.CreatedAt, newCar.UpdatedAt).Scan(&createdCar.ID, &createdCar.Name, &createdCar.Year, &createdCar.Brand, &createdCar.FuelType, &createdCar.Engine, &createdCar.Price, &createdCar.CreatedAt, &createdCar.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return models.Car{}, errors.New("no rows returned from the query")
