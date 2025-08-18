@@ -19,8 +19,8 @@ type Car struct {
 	FuelType   string       `json:"fuel_type"`   // Type of fuel (Petrol, Diesel, Electric, Hybrid)
 	Engine      Engine       `json:"engine"`      // Engine specifications
 	Price       float64      `json:"price"`       // Price of the car in the system's currency
-	CreatedAt   string       `json:"created_at"`  // Timestamp when the car record was created
-	UpdatedAt   string       `json:"updated_at"`  // Timestamp when the car record was last updated
+	CreatedAt   time.Time       `json:"created_at"`  // Timestamp when the car record was created
+	UpdatedAt   time.Time      `json:"updated_at"`  // Timestamp when the car record was last updated
 }
 // CarRequest represents the data structure for creating or updating a car
 // It contains all the necessary fields for car creation but excludes system-generated
