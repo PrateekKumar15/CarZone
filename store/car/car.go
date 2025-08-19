@@ -22,7 +22,7 @@ func (s Store) GetCarByID(ctx context.Context, id string) (models.Car, error) {
 	var car models.Car
 	query := "SELECT c.id, c.name, c.year, c.brand, c.fuel_type, c.engine_id, c.price, c.created_at, c.updated_at, e.id, e.displacement, e.no_of_cylinders, e.car_range FROM car c LEFT JOIN engine e ON c.engine_id = e.id WHERE c.id = $1"
 	row := s.db.QueryRowContext(ctx, query, id)
-	err := row.Scan(&car.ID, &car.Name, &car.Year, &car.Brand, &car.FuelType, &car.Price, &car.CreatedAt, &car.UpdatedAt, &car.Engine.EngineID, &car.Engine.Displacement, &car.Engine.NoOfCylinders, &car.Engine.CarRange)
+	err := row.Scan(&car.ID, &car.Name, &car.Year, &car.Brand, &car.FuelType, &car.Price, &car.CreatedAt, &car.UpdatedAt, &car.Engine.ID, &car.Engine.Displacement, &car.Engine.NoOfCylinders, &car.Engine.CarRange)
 	if err != nil {
 		switch err {
 		case sql.ErrNoRows:
@@ -55,7 +55,7 @@ func (s Store) GetCarByBrand(ctx context.Context, brand string, isEngine bool) (
 	for rows.Next() {
 		var car models.Car
 		if isEngine {
-			err = rows.Scan(&car.ID, &car.Name, &car.Year, &car.Brand, &car.FuelType, &car.Price, &car.CreatedAt, &car.UpdatedAt, &car.Engine.EngineID, &car.Engine.Displacement, &car.Engine.NoOfCylinders, &car.Engine.CarRange)
+			err = rows.Scan(&car.ID, &car.Name, &car.Year, &car.Brand, &car.FuelType, &car.Price, &car.CreatedAt, &car.UpdatedAt, &car.Engine.ID, &car.Engine.Displacement, &car.Engine.NoOfCylinders, &car.Engine.CarRange)
 			if err != nil {
 				return nil, err // Return error if row scan fails
 			}
@@ -76,7 +76,7 @@ func (s Store) CreateCar(ctx context.Context, carReq models.CarRequest) (models.
 	var createdCar models.Car
 	var engineID uuid.UUID
 
-	err := s.db.QueryRowContext(ctx, "Select id from engine where id = $1", carReq.Engine.EngineID).Scan(&engineID)
+	err := s.db.QueryRowContext(ctx, "Select id from engine where id = $1", carReq.Engine.ID).Scan(&engineID)
 	if err!=nil {
 		if err == sql.ErrNoRows {
 			return models.Car{}, errors.New("engine id not found")
@@ -144,7 +144,7 @@ func (s Store) UpdateCar(ctx context.Context, id string, carReq models.CarReques
 		}
 	}()
 	query := `UPDATE car SET name = $1, year = $2, brand = $3, fuel_type = $4, engine_id = $5, price = $6, updated_at = $7 WHERE id = $8 RETURNING id, name, year, brand, fuel_type, engine_id, price, created_at, updated_at`
-	err = tx.QueryRowContext(ctx, query, carReq.Name, carReq.Year, carReq.Brand, carReq.FuelType, carReq.Engine.EngineID, carReq.Price, time.Now(), id).Scan(&updatedCar.ID, &updatedCar.Name, &updatedCar.Year, &updatedCar.Brand, &updatedCar.FuelType, &updatedCar.Engine.EngineID, &updatedCar.Price, &updatedCar.CreatedAt, &updatedCar.UpdatedAt)
+	err = tx.QueryRowContext(ctx, query, carReq.Name, carReq.Year, carReq.Brand, carReq.FuelType, carReq.Engine.ID, carReq.Price, time.Now(), id).Scan(&updatedCar.ID, &updatedCar.Name, &updatedCar.Year, &updatedCar.Brand, &updatedCar.FuelType, &updatedCar.Engine.ID, &updatedCar.Price, &updatedCar.CreatedAt, &updatedCar.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return models.Car{}, errors.New("no rows returned from the query")
@@ -174,7 +174,7 @@ func (s Store) DeleteCar(ctx context.Context, id string) (models.Car,error) {
 		}
 	}()
 	query := `Select id, name, year, brand, fuel_type, engine_id, price, created_at, updated_at FROM car WHERE id = $1`
-	err = tx.QueryRowContext(ctx, query, id).Scan(&deletedCar.ID, &deletedCar.Name, &deletedCar.Year, &deletedCar.Brand, &deletedCar.FuelType, &deletedCar.Engine.EngineID, &deletedCar.Price, &deletedCar.CreatedAt, &deletedCar.UpdatedAt)
+	err = tx.QueryRowContext(ctx, query, id).Scan(&deletedCar.ID, &deletedCar.Name, &deletedCar.Year, &deletedCar.Brand, &deletedCar.FuelType, &deletedCar.Engine.ID, &deletedCar.Price, &deletedCar.CreatedAt, &deletedCar.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return models.Car{},errors.New("no car found with the given ID")
