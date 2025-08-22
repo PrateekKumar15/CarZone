@@ -46,3 +46,10 @@ func (s *EngineService) DeleteEngine(ctx context.Context, id string) (*models.En
 	}
 	return &deletedEngine, nil // Return the deleted engine
 }
+func (s *EngineService) GetEngineByBrand(ctx context.Context, brand string) (*[]models.Engine, error) {
+	engines, err := s.store.GetEngineByBrand(ctx, brand)
+	if err != nil {
+		return nil, err // Return error if fetching engines by brand fails
+	}
+	return &engines, nil // Return the found engines
+}
