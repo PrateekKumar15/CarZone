@@ -10,15 +10,15 @@ import (
 	"github.com/google/uuid"
 )
 
-type Store struct {
+type CarStore struct {
 	db *sql.DB
 }
 
-func New(db *sql.DB) Store {
-	return Store{db: db}
+func New(db *sql.DB) CarStore {
+	return CarStore{db: db}
 }
 
-func (s Store) GetCarByID(ctx context.Context, id string) (models.Car, error) {
+func (s CarStore) GetCarByID(ctx context.Context, id string) (models.Car, error) {
 	var car models.Car
 	query := "SELECT c.id, c.name, c.year, c.brand, c.fuel_type, c.engine_id, c.price, c.created_at, c.updated_at, e.id, e.displacement, e.no_of_cylinders, e.car_range FROM car c LEFT JOIN engine e ON c.engine_id = e.id WHERE c.id = $1"
 	row := s.db.QueryRowContext(ctx, query, id)
@@ -36,7 +36,7 @@ func (s Store) GetCarByID(ctx context.Context, id string) (models.Car, error) {
 	return car, nil // Return the found car
 }
 
-func (s Store) GetCarByBrand(ctx context.Context, brand string, isEngine bool) ([]models.Car, error) {
+func (s CarStore) GetCarByBrand(ctx context.Context, brand string, isEngine bool) ([]models.Car, error) {
 	var cars []models.Car
 	var query string
 	if isEngine {
@@ -72,7 +72,7 @@ func (s Store) GetCarByBrand(ctx context.Context, brand string, isEngine bool) (
 	return cars, nil // Return the list of cars
 }
 
-func (s Store) CreateCar(ctx context.Context, carReq models.CarRequest) (models.Car, error) {
+func (s CarStore) CreateCar(ctx context.Context, carReq models.CarRequest) (models.Car, error) {
 	var createdCar models.Car
 	var engineID uuid.UUID
 
@@ -125,7 +125,7 @@ func (s Store) CreateCar(ctx context.Context, carReq models.CarRequest) (models.
 	return createdCar, nil // Return the created car
 }
 
-func (s Store) UpdateCar(ctx context.Context, id string, carReq models.CarRequest) (models.Car, error) {
+func (s CarStore) UpdateCar(ctx context.Context, id string, carReq models.CarRequest) (models.Car, error) {
  var updatedCar models.Car
  //  Begin the transaction
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -155,7 +155,7 @@ func (s Store) UpdateCar(ctx context.Context, id string, carReq models.CarReques
 
 }
 
-func (s Store) DeleteCar(ctx context.Context, id string) (models.Car,error) {
+func (s CarStore) DeleteCar(ctx context.Context, id string) (models.Car,error) {
 	var deletedCar models.Car
 	 //  Begin the transaction
 	tx, err := s.db.BeginTx(ctx, nil)
