@@ -11,11 +11,6 @@
 ALTER TABLE IF EXISTS car 
 DROP CONSTRAINT IF EXISTS fk_engine_id;
 
--- Clear existing data to ensure clean slate for schema setup
--- TRUNCATE is faster than DELETE for removing all rows
-TRUNCATE TABLE IF EXISTS car CASCADE;
-TRUNCATE TABLE IF EXISTS engine CASCADE;
-
 -- Drop existing tables if they exist (for complete reset)
 DROP TABLE IF EXISTS car;
 DROP TABLE IF EXISTS engine;
@@ -32,8 +27,8 @@ CREATE TABLE engine (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
     -- Engine technical specifications
-    displacement INT NOT NULL CHECK (displacement > 0),           -- Engine displacement in cubic centimeters (cc)
-    no_of_cylinders INT NOT NULL CHECK (no_of_cylinders > 0),     -- Number of cylinders (e.g., 4, 6, 8)
+    displacement INT NOT NULL CHECK (displacement >= 0),          -- Engine displacement in cubic centimeters (cc), 0 for electric
+    no_of_cylinders INT NOT NULL CHECK (no_of_cylinders >= 0),    -- Number of cylinders (e.g., 4, 6, 8), 0 for electric
     car_range INT NOT NULL CHECK (car_range > 0),                 -- Vehicle range in kilometers
     
     -- Audit trail columns for tracking changes
