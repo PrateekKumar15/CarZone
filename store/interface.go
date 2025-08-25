@@ -65,6 +65,8 @@ type CarStoreInterface interface {
 	//   - models.Car: The deleted car record (for logging/audit purposes)
 	//   - error: Error if car not found or deletion fails
 	DeleteCar(ctx context.Context, id string) (models.Car, error)
+
+	GetAllCars(ctx context.Context) ([]models.Car, error)
 }
 
 // EngineStoreInterface defines the contract for engine data access operations.
@@ -112,13 +114,4 @@ type EngineStoreInterface interface {
 	//   - error: Error if engine not found or deletion fails due to constraints
 	DeleteEngine(ctx context.Context, id string) (models.Engine, error)
 
-	// GetEngineByBrand retrieves multiple engine records filtered by brand.
-	// This method allows querying engines based on the brand of cars they are associated with.
-	// Parameters:
-	//   - ctx: Request context for cancellation and timeout
-	//   - brand: Brand name to filter engines by
-	// Returns:
-	//   - []models.Engine: Slice of engine records associated with the specified brand
-	//   - error: Error if database operation fails
-	GetEngineByBrand(ctx context.Context, brand string) ([]models.Engine, error)
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/PrateekKumar15/CarZone/models"
 	"github.com/PrateekKumar15/CarZone/store"
+	"go.opentelemetry.io/otel"
 )
 
 type CarService struct {
@@ -16,7 +17,10 @@ func NewCarService(store store.CarStoreInterface) *CarService {
 }
 
 func (s *CarService) GetCarByID(ctx context.Context, id string) (*models.Car, error) {
+	tracer := otel.Tracer("CarService")
+	ctx, span := tracer.Start(ctx, "GetCarByID-Service")
 	car, err := s.store.GetCarByID(ctx, id)
+	defer span.End()
 	if err != nil {
 		return nil, err // Return error if fetching car fails
 	}
@@ -24,6 +28,9 @@ func (s *CarService) GetCarByID(ctx context.Context, id string) (*models.Car, er
 }
 
 func (s *CarService) GetCarByBrand(ctx context.Context, brand string, isEngine bool) (*[]models.Car, error) {
+	tracer := otel.Tracer("CarService")
+	ctx, span := tracer.Start(ctx, "GetCarByBrand-Service")
+	defer span.End()
 	cars, err := s.store.GetCarByBrand(ctx, brand, isEngine)
 	if err != nil {
 		return nil, err // Return error if fetching cars by brand fails
@@ -32,6 +39,9 @@ func (s *CarService) GetCarByBrand(ctx context.Context, brand string, isEngine b
 }
 
 func (s *CarService) CreateCar(ctx context.Context, carReq models.CarRequest) (*models.Car, error) {
+	tracer := otel.Tracer("CarService")
+	ctx, span := tracer.Start(ctx, "CreateCar-Service")
+	defer span.End()
 	if err := models.ValidateRequest(carReq); err != nil {
 		return nil, err // Return error if validation fails
 	}
@@ -43,6 +53,9 @@ func (s *CarService) CreateCar(ctx context.Context, carReq models.CarRequest) (*
 }
 
 func (s *CarService) UpdateCar(ctx context.Context, id string, carReq models.CarRequest) (*models.Car, error) {
+	tracer := otel.Tracer("CarService")
+	ctx, span := tracer.Start(ctx, "UpdateCar-Service")
+	defer span.End()
 	if err := models.ValidateRequest(carReq); err != nil {
 		return nil, err // Return error if validation fails
 	}
@@ -53,9 +66,23 @@ func (s *CarService) UpdateCar(ctx context.Context, id string, carReq models.Car
 	return &updatedCar, nil // Return the updated car
 }
 func (s *CarService) DeleteCar(ctx context.Context, id string) (*models.Car, error) {
+	tracer := otel.Tracer("CarService")
+	ctx, span := tracer.Start(ctx, "DeleteCar-Service")
+	defer span.End()
 	deletedCar, err := s.store.DeleteCar(ctx, id)
 	if err != nil {
 		return nil, err // Return error if deleting car fails
 	}
 	return &deletedCar, nil // Return the deleted car
+}
+
+func (s *CarService) GetAllCars(ctx context.Context) (*[]models.Car, error) {
+	tracer := otel.Tracer("CarService")
+	ctx, span := tracer.Start(ctx, "GetAllCars-Service")
+	defer span.End()
+	cars, err := s.store.GetAllCars(ctx)
+	if err != nil {
+		return nil, err // Return error if fetching all cars fails
+	}
+	return &cars, nil // Return the list of all cars
 }

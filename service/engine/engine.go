@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/PrateekKumar15/CarZone/models"
 	"github.com/PrateekKumar15/CarZone/store"
+	"go.opentelemetry.io/otel"
 )
 
 type EngineService struct {
@@ -13,6 +14,9 @@ func NewEngineService(store store.EngineStoreInterface) *EngineService {
 	return &EngineService{store: store}
 }
 func (s *EngineService) GetEngineByID(ctx context.Context, id string) (*models.Engine, error) {
+	tracer := otel.Tracer("EngineService")
+	ctx, span := tracer.Start(ctx, "GetEngineByID-Service")
+	defer span.End()
 	engine, err := s.store.GetEngineByID(ctx, id)
 	if err != nil {
 		return nil, err // Return error if fetching engine fails
@@ -20,6 +24,9 @@ func (s *EngineService) GetEngineByID(ctx context.Context, id string) (*models.E
 	return &engine, nil // Return the found engine
 }
 func (s *EngineService) CreateEngine(ctx context.Context, engineReq models.EngineRequest) (*models.Engine, error) {
+	tracer := otel.Tracer("EngineService")
+	ctx, span := tracer.Start(ctx, "CreateEngine-Service")	
+	defer span.End()
 	if err := models.ValidateEngineRequest(engineReq); err != nil {
 		return nil, err // Return error if validation fails
 	}
@@ -30,6 +37,9 @@ func (s *EngineService) CreateEngine(ctx context.Context, engineReq models.Engin
 	return &createdEngine, nil // Return the created engine
 }
 func (s *EngineService) UpdateEngine(ctx context.Context, id string, engineReq models.EngineRequest) (*models.Engine, error) {
+	tracer := otel.Tracer("EngineService")
+	ctx, span := tracer.Start(ctx, "UpdateEngine-Service")
+	defer span.End()
 	if err := models.ValidateEngineRequest(engineReq); err != nil {
 		return nil, err // Return error if validation fails
 	}
@@ -40,16 +50,13 @@ func (s *EngineService) UpdateEngine(ctx context.Context, id string, engineReq m
 	return &updatedEngine, nil // Return the updated engine
 }
 func (s *EngineService) DeleteEngine(ctx context.Context, id string) (*models.Engine, error) {
+	tracer := otel.Tracer("EngineService")
+	ctx, span := tracer.Start(ctx, "DeleteEngine-Service")
+	defer span.End()
 	deletedEngine, err := s.store.DeleteEngine(ctx, id)
 	if err != nil {
 		return nil, err // Return error if deleting engine fails
 	}
 	return &deletedEngine, nil // Return the deleted engine
 }
-func (s *EngineService) GetEngineByBrand(ctx context.Context, brand string) (*[]models.Engine, error) {
-	engines, err := s.store.GetEngineByBrand(ctx, brand)
-	if err != nil {
-		return nil, err // Return error if fetching engines by brand fails
-	}
-	return &engines, nil // Return the found engines
-}
+

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/PrateekKumar15/CarZone/models"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
 )
 
 // EngineStore is a concrete implementation of the EngineStoreInterface.
@@ -52,6 +53,9 @@ func New(db *sql.DB) *EngineStore {
 //   - models.Engine: The engine record if found, empty engine if not found
 //   - error: Error for invalid ID format, database failures, or other issues
 func (e EngineStore) GetEngineByID(ctx context.Context, id string) (models.Engine, error) {
+	tracer := otel.Tracer("EngineStore")
+	ctx, span := tracer.Start(ctx, "GetEngineByID-Store")
+	defer span.End()
 	var engine models.Engine
 
 	// Parse and validate the engine ID from string to UUID format
@@ -100,6 +104,9 @@ func (e EngineStore) GetEngineByID(ctx context.Context, id string) (models.Engin
 }
 
 func (e EngineStore) CreateEngine(ctx context.Context, engineReq models.EngineRequest) (models.Engine, error) {
+	tracer := otel.Tracer("EngineStore")
+	ctx, span := tracer.Start(ctx, "CreateEngine-Store")
+	defer span.End()
 	newEngine := models.Engine{
 		ID:            uuid.New(), // Generate a new UUID for the engine
 		Displacement:  engineReq.Displacement,
@@ -137,6 +144,10 @@ func (e EngineStore) CreateEngine(ctx context.Context, engineReq models.EngineRe
 }
 
 func (e EngineStore) UpdateEngine(ctx context.Context, id string, engineReq models.EngineRequest) (models.Engine, error) {
+	tracer := otel.Tracer("EngineStore")
+	ctx, span := tracer.Start(ctx, "UpdateEngine-Store")
+	defer span.End()
+	// Parse the string ID to UUID
 	engineId, err := uuid.Parse(id)
 	if err != nil {
 		return models.Engine{}, fmt.Errorf("invalid engine ID format: %v", err)
@@ -178,6 +189,9 @@ func (e EngineStore) UpdateEngine(ctx context.Context, id string, engineReq mode
 }
 
 func (e EngineStore) DeleteEngine(ctx context.Context, id string) (models.Engine, error) {
+	tracer := otel.Tracer("EngineStore")
+	ctx, span := tracer.Start(ctx, "DeleteEngine-Store")
+	defer span.End()
 	var engine models.Engine
 
 	// Parse the string ID to UUID
@@ -220,40 +234,4 @@ func (e EngineStore) DeleteEngine(ctx context.Context, id string) (models.Engine
 	return engine, nil // Return the deleted engine
 }
 
-func (e EngineStore) GetEngineByBrand(ctx context.Context, brand string) ([]models.Engine, error) {
-	var engines []models.Engine
-	// Begin the transaction
-	tx, err := e.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err // Return error if transaction cannot be started
-	}
-	// Insert the car into the database
-	defer func() {
-		if err != nil {
-			if rbErr := tx.Rollback(); rbErr != nil {
-				fmt.Printf("Transaction rollback error: %v\n", rbErr) // Log rollback error
-			}
-		} else {
-			if cmErr := tx.Commit(); cmErr != nil {
-				fmt.Printf("Transaction commit error: %v\n", cmErr) // Log commit error
-			}
-		}
-	}()
-	query := `SELECT engine_id, displacement, no_of_cylinders, car_range FROM engine WHERE brand = $1`
-	rows, err := tx.QueryContext(ctx, query, brand)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch engines by brand: %v", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var engine models.Engine
-		if err := rows.Scan(&engine.ID, &engine.Displacement, &engine.NoOfCylinders, &engine.CarRange); err != nil {
-			return nil, fmt.Errorf("failed to scan engine row: %v", err)
-		}
-		engines = append(engines, engine)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error occurred while iterating over rows: %v", err)
-	}
-	return engines, nil // Return the found engines
-}
+

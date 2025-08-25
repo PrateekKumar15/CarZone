@@ -1,27 +1,32 @@
 package car
 
 import (
+	"encoding/json"
+	"io"
 	"log"
 	"net/http"
-	"encoding/json"
 	"github.com/PrateekKumar15/CarZone/models"
 	"github.com/PrateekKumar15/CarZone/service"
 	"github.com/gorilla/mux"
-	"io"
+	"go.opentelemetry.io/otel"
 )
 
 // CarHandler struct to handle car-related requests
 type CarHandler struct {
 	service service.CarServiceInterface
 }
+
 // NewCarHandler creates a new CarHandler with the provided service
 func NewCarHandler(service service.CarServiceInterface) *CarHandler {
 	return &CarHandler{service: service}
 }
 
 // GetCarByID retrieves a car by its ID
-func (h *CarHandler) GetCarByID(w http.ResponseWriter, r *http.Request)  {
+func (h *CarHandler) GetCarByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("CarHandler")
+	ctx, span := tracer.Start(ctx, "GetCarByID-Handler")
+	defer span.End()
 	vars := mux.Vars(r)
 	id := vars["id"]
 	resp, err := h.service.GetCarByID(ctx, id)
@@ -34,7 +39,7 @@ func (h *CarHandler) GetCarByID(w http.ResponseWriter, r *http.Request)  {
 		http.Error(w, "Car not found", http.StatusNotFound)
 		return
 	}
-	body,err := json.Marshal(resp)
+	body, err := json.Marshal(resp)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("Error marshalling response:", err)
@@ -43,7 +48,7 @@ func (h *CarHandler) GetCarByID(w http.ResponseWriter, r *http.Request)  {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	_,err = w.Write(body)
+	_, err = w.Write(body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("Error writing response:", err)
@@ -53,16 +58,19 @@ func (h *CarHandler) GetCarByID(w http.ResponseWriter, r *http.Request)  {
 
 func (h *CarHandler) GetCarByBrand(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("CarHandler")
+	ctx, span := tracer.Start(ctx, "GetCarByBrand-Handler")
+	defer span.End()
 	brand := r.URL.Query().Get("brand")
 	isEngine := r.URL.Query().Get("isEngine") == "true"
-	
-	resp,err := h.service.GetCarByBrand(ctx, brand, isEngine)
+
+	resp, err := h.service.GetCarByBrand(ctx, brand, isEngine)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("Error retrieving car by brand:", err)
 		return
 	}
-	body,err := json.Marshal(resp)
+	body, err := json.Marshal(resp)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("Error marshalling response:", err)
@@ -70,7 +78,7 @@ func (h *CarHandler) GetCarByBrand(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_,err = w.Write(body)
+	_, err = w.Write(body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("Error writing response:", err)
@@ -80,6 +88,9 @@ func (h *CarHandler) GetCarByBrand(w http.ResponseWriter, r *http.Request) {
 
 func (h *CarHandler) CreateCar(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("CarHandler")
+	ctx, span := tracer.Start(ctx, "CreateCar-Handler")
+	defer span.End()
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -94,7 +105,6 @@ func (h *CarHandler) CreateCar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := models.ValidateRequest(carRequest); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
 		log.Println("Validation error:", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -114,12 +124,15 @@ func (h *CarHandler) CreateCar(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	// Write the created car JSON to the response
-	_,_ = w.Write(createdCarJSON)
-	
+	_, _ = w.Write(createdCarJSON)
+
 }
 
 func (h *CarHandler) UpdateCar(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("CarHandler")
+	ctx, span := tracer.Start(ctx, "UpdateCar-Handler")
+	defer span.End()
 	vars := mux.Vars(r)
 	id := vars["id"]
 	body, err := io.ReadAll(r.Body)
@@ -156,15 +169,18 @@ func (h *CarHandler) UpdateCar(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	// Write the updated car JSON to the response
-	_,_ = w.Write(updatedCarJSON)
-	
+	_, _ = w.Write(updatedCarJSON)
+
 }
 
 func (h *CarHandler) DeleteCar(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("CarHandler")
+	ctx, span := tracer.Start(ctx, "DeleteCar-Handler")
+	defer span.End()
 	vars := mux.Vars(r)
 	id := vars["id"]
-	deletedCar,err := h.service.DeleteCar(ctx, id)
+	deletedCar, err := h.service.DeleteCar(ctx, id)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("Error deleting car:", err)
@@ -175,14 +191,41 @@ func (h *CarHandler) DeleteCar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// No need to return the deleted car, just a success status
-	body,err := json.Marshal(deletedCar)
+	body, err := json.Marshal(deletedCar)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("Error marshalling response:", err)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK) 
-	_,_ = w.Write(body)
-	
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(body)
+
+}
+
+func (h *CarHandler) GetAllCars(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tracer := otel.Tracer("CarHandler")
+	ctx, span := tracer.Start(ctx, "GetAllCars-Handler")
+	defer span.End()
+	cars, err := h.service.GetAllCars(ctx)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("Error retrieving all cars:", err)
+		return
+	}
+	body, err := json.Marshal(cars)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("Error marshalling response:", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("Error writing response:", err)
+		return
+	}
 }

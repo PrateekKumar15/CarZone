@@ -66,6 +66,7 @@ type CarServiceInterface interface {
 	//   - *models.Car: Pointer to the deleted car record (for audit purposes)
 	//   - error: Business rule violation or deletion failure
 	DeleteCar(ctx context.Context, id string) (*models.Car, error)
+	GetAllCars(ctx context.Context) (*[]models.Car, error)
 }
 
 // EngineServiceInterface defines the contract for engine business logic operations.
@@ -114,13 +115,4 @@ type EngineServiceInterface interface {
 	//   - error: Dependency violation or deletion failure
 	DeleteEngine(ctx context.Context, id string) (*models.Engine, error)
 
-	// GetEngineByBrand retrieves engines associated with a specific car brand.
-	// Applies business logic for brand-engine relationships and filtering.
-	// Parameters:
-	//   - ctx: Request context for cancellation and timeout
-	//   - brand: Car brand name to filter engines by
-	// Returns:
-	//   - *[]models.Engine: Pointer to slice of engines associated with the brand
-	//   - error: Business logic error or data access error
-	GetEngineByBrand(ctx context.Context, brand string) (*[]models.Engine, error)
 }

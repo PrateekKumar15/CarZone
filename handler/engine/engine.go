@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/PrateekKumar15/CarZone/models"
 	"io"
+	"go.opentelemetry.io/otel"
 )	
 
 type EngineHandler struct {
@@ -19,6 +20,9 @@ func NewEngineHandler(service service.EngineServiceInterface) *EngineHandler {
 
 func (h *EngineHandler) GetEngineByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("EngineHandler")
+	ctx, span := tracer.Start(ctx, "GetEngineByID-Handler")
+	defer span.End()
 	vars := mux.Vars(r)
 	id := vars["id"]
 	if id == "" {
@@ -52,6 +56,9 @@ w.WriteHeader(http.StatusOK)
 
 func (h *EngineHandler) CreateEngine(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("EngineHandler")
+	ctx, span := tracer.Start(ctx, "CreateEngine-Handler")
+	defer span.End()
 	body,err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
@@ -79,6 +86,9 @@ func (h *EngineHandler) CreateEngine(w http.ResponseWriter, r *http.Request) {
 
 func (h *EngineHandler) UpdateEngine(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("EngineHandler")
+	ctx, span := tracer.Start(ctx, "UpdateEngine-Handler")
+	defer span.End()
 	vars := mux.Vars(r)
 	id := vars["id"]
 	if id == "" {
@@ -113,6 +123,9 @@ func (h *EngineHandler) UpdateEngine(w http.ResponseWriter, r *http.Request) {
 
 func (h *EngineHandler) DeleteEngine(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	tracer := otel.Tracer("EngineHandler")
+	ctx, span := tracer.Start(ctx, "DeleteEngine-Handler")
+	defer span.End()
 	vars := mux.Vars(r)
 	id := vars["id"]
 	if id == "" {
@@ -135,27 +148,5 @@ func (h *EngineHandler) DeleteEngine(w http.ResponseWriter, r *http.Request) {
 	
 }
 
-func (h* EngineHandler) GetEngineByBrand(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	vars := mux.Vars(r)
-	brand := vars["brand"]
-	if brand == "" {
-		http.Error(w, "Brand is required", http.StatusBadRequest)
-		return
-	}
-	engines, err := h.service.GetEngineByBrand(ctx, brand)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching engines: %v", err), http.StatusInternalServerError)
-		return
-	}
-	body, err := json.Marshal(engines)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error marshalling response: %v", err), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(body)
-}
 
 
