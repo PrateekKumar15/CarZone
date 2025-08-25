@@ -4,11 +4,14 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+
+	"time"
 
 	// Database connection management
 	"github.com/PrateekKumar15/CarZone/driver"
@@ -26,8 +29,18 @@ import (
 	engineStore "github.com/PrateekKumar15/CarZone/store/engine"
 
 	// Third-party dependencies
+	loginHandler "github.com/PrateekKumar15/CarZone/handler/login"
+	"github.com/PrateekKumar15/CarZone/middleware"
 	"github.com/gorilla/mux"   // HTTP router and URL matcher
 	"github.com/joho/godotenv" // Environment variable loader
+	// "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 // main is the entry point of the CarZone application.
@@ -45,6 +58,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
+
+	traceProvider, err := startTracing()
+	if err != nil {
+		log.Fatalf("Failed to start tracing: %v", err)
+	}
+	defer func() {
+		if err := traceProvider.Shutdown(context.Background()); err != nil {
+			log.Fatalf("Failed to shutdown tracer provider: %v", err)
+		}
+	}()
+	// Set global tracer provider
+	// This enables tracing throughout the application
+	otel.SetTracerProvider(traceProvider)
 
 	// Step 2: Initialize database connection
 	// The driver package handles PostgreSQL connection setup
@@ -94,44 +120,53 @@ func main() {
 		return nil
 	}
 
-
-	schemaFile :="store/schema.sql"
+	schemaFile := "store/schema.sql"
 	if err := executeSchemaFile(db, schemaFile); err != nil {
 		log.Fatalf("Failed to execute schema file %s: %v", schemaFile, err)
 	}
+	router.Use((otelmux.Middleware("CarZone")))
+	// Authentication endpoint
+	router.HandleFunc("/login", loginHandler.LoginHandler).Methods("POST")
 
+	// Public endpoints (no auth required)
+	// You can add more public endpoints here if needed
+
+	// Protected endpoints (require authentication)
+	protected := router.PathPrefix("/").Subrouter()
+	protected.Use(middleware.AuthMiddleware)
 
 	// Car-related endpoints
-	// GET /cars/{id} - Retrieve a specific car by its UUID
-	router.HandleFunc("/cars/{id}", carHandler.GetCarByID).Methods("GET")
+	// GET /cars/all - Retrieve all cars (must come before /cars/{id})
+	protected.HandleFunc("/cars", carHandler.GetAllCars).Methods("GET")
 
-	// GET /cars?brand={brand}&engine={true/false} - Retrieve cars by brand with optional engine details
-	router.HandleFunc("/cars", carHandler.GetCarByBrand).Methods("GET")
+	// GET /cars/{id} - Retrieve a specific car by its UUID
+	protected.HandleFunc("/cars/{id}", carHandler.GetCarByID).Methods("GET")
+
+	// GET /cars/brand?brand={brand}&engine={true/false} - Retrieve cars by brand with optional engine details
+	protected.HandleFunc("/carbybrand", carHandler.GetCarByBrand).Methods("GET")
 
 	// POST /cars - Create a new car record
-	router.HandleFunc("/cars", carHandler.CreateCar).Methods("POST")
+	protected.HandleFunc("/cars", carHandler.CreateCar).Methods("POST")
 
 	// PUT /cars/{id} - Update an existing car by its UUID
-	router.HandleFunc("/cars/{id}", carHandler.UpdateCar).Methods("PUT")
+	protected.HandleFunc("/cars/{id}", carHandler.UpdateCar).Methods("PUT")
 
 	// DELETE /cars/{id} - Delete a car by its UUID
-	router.HandleFunc("/cars/{id}", carHandler.DeleteCar).Methods("DELETE")
+	protected.HandleFunc("/cars/{id}", carHandler.DeleteCar).Methods("DELETE")
 
 	// Engine-related endpoints
 	// GET /engines/{id} - Retrieve a specific engine by its UUID
-	router.HandleFunc("/engines/{id}", engineHandler.GetEngineByID).Methods("GET")
+	protected.HandleFunc("/engines/{id}", engineHandler.GetEngineByID).Methods("GET")
 
-	// GET /engines?brand={brand} - Retrieve engines by brand
-	router.HandleFunc("/engines", engineHandler.GetEngineByBrand).Methods("GET")
 
 	// POST /engines - Create a new engine record
-	router.HandleFunc("/engines", engineHandler.CreateEngine).Methods("POST")
+	protected.HandleFunc("/engines", engineHandler.CreateEngine).Methods("POST")
 
 	// PUT /engines/{id} - Update an existing engine by its UUID
-	router.HandleFunc("/engines/{id}", engineHandler.UpdateEngine).Methods("PUT")
+	protected.HandleFunc("/engines/{id}", engineHandler.UpdateEngine).Methods("PUT")
 
 	// DELETE /engines/{id} - Delete an engine by its UUID
-	router.HandleFunc("/engines/{id}", engineHandler.DeleteEngine).Methods("DELETE")
+	protected.HandleFunc("/engines/{id}", engineHandler.DeleteEngine).Methods("DELETE")
 
 	// Step 5: Start the HTTP server
 	// Get port from environment variables with fallback to default
@@ -150,4 +185,34 @@ func main() {
 	if err := http.ListenAndServe(":"+port, router); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+}
+
+func startTracing() (*trace.TracerProvider, error) {
+	header := map[string]string{
+		"Content-Type": "application/json",
+	}
+	exporter, err := otlptrace.New(
+		context.Background(),
+		otlptracehttp.NewClient(
+			otlptracehttp.WithEndpoint("jaeger:4318"),
+			otlptracehttp.WithHeaders(header),
+			otlptracehttp.WithInsecure(),
+		),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create exporter: %w", err)
+	}
+
+	traceProvider := trace.NewTracerProvider(
+		trace.WithBatcher(exporter,
+			trace.WithMaxExportBatchSize(trace.DefaultMaxExportBatchSize),
+			trace.WithBatchTimeout(trace.DefaultScheduleDelay*time.Millisecond),
+		),
+		trace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String("CarZone"),
+		)),
+	)
+
+	return traceProvider, nil
 }
