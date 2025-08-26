@@ -10,9 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-
 	"time"
-
 	// Database connection management
 	"github.com/PrateekKumar15/CarZone/driver"
 
@@ -41,6 +39,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv/v1.4.0"
+	// Prometheus metrics
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // main is the entry point of the CarZone application.
@@ -127,13 +127,15 @@ func main() {
 	router.Use((otelmux.Middleware("CarZone")))
 	// Authentication endpoint
 	router.HandleFunc("/login", loginHandler.LoginHandler).Methods("POST")
-
+	// Prometheus metrics endpoint
+	router.Handle("/metrics", promhttp.Handler())
 	// Public endpoints (no auth required)
 	// You can add more public endpoints here if needed
 
 	// Protected endpoints (require authentication)
 	protected := router.PathPrefix("/").Subrouter()
 	protected.Use(middleware.AuthMiddleware)
+	protected.Use(middleware.MetricMiddleware)
 
 	// Car-related endpoints
 	// GET /cars/all - Retrieve all cars (must come before /cars/{id})
