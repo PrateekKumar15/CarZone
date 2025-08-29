@@ -9,7 +9,6 @@
 ![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=json-web-tokens&logoColor=white)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Go Report Card](https://goreportcard.com/badge/github.com/PrateekKumar15/CarZone)](https://goreportcard.com/report/github.com/PrateekKumar15/CarZone)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/PrateekKumar15/CarZone)
 
 </div>
