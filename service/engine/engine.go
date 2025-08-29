@@ -10,6 +10,7 @@ import (
 type EngineService struct {
 	store store.EngineStoreInterface
 }
+
 func NewEngineService(store store.EngineStoreInterface) *EngineService {
 	return &EngineService{store: store}
 }
@@ -25,7 +26,7 @@ func (s *EngineService) GetEngineByID(ctx context.Context, id string) (*models.E
 }
 func (s *EngineService) CreateEngine(ctx context.Context, engineReq models.EngineRequest) (*models.Engine, error) {
 	tracer := otel.Tracer("EngineService")
-	ctx, span := tracer.Start(ctx, "CreateEngine-Service")	
+	ctx, span := tracer.Start(ctx, "CreateEngine-Service")
 	defer span.End()
 	if err := models.ValidateEngineRequest(engineReq); err != nil {
 		return nil, err // Return error if validation fails
@@ -59,4 +60,3 @@ func (s *EngineService) DeleteEngine(ctx context.Context, id string) (*models.En
 	}
 	return &deletedEngine, nil // Return the deleted engine
 }
-

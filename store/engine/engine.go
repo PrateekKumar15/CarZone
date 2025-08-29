@@ -233,5 +233,3 @@ func (e EngineStore) DeleteEngine(ctx context.Context, id string) (models.Engine
 	}
 	return engine, nil // Return the deleted engine
 }
-
-

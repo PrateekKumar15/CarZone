@@ -113,5 +113,4 @@ type EngineStoreInterface interface {
 	//   - models.Engine: The deleted engine record (for logging/audit purposes)
 	//   - error: Error if engine not found or deletion fails due to constraints
 	DeleteEngine(ctx context.Context, id string) (models.Engine, error)
-
 }

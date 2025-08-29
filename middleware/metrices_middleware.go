@@ -1,10 +1,10 @@
 package middleware
+
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	// "github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"time"
-
 )
 
 var (
@@ -18,8 +18,8 @@ var (
 	)
 	requestDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "http_request_duration_seconds",
-			Help:    "Duration of HTTP requests",
+			Name: "http_request_duration_seconds",
+			Help: "Duration of HTTP requests",
 		},
 		[]string{"path", "method"},
 	)
@@ -31,6 +31,7 @@ var (
 		[]string{"path", "method", "status_code"},
 	)
 )
+
 type responseWriter struct {
 	http.ResponseWriter
 	statusCode int
@@ -38,14 +39,14 @@ type responseWriter struct {
 
 func init() {
 	// Register the metrics with Prometheus's default registry
-	prometheus.MustRegister(requestCounter, requestDuration,statusCounter)
+	prometheus.MustRegister(requestCounter, requestDuration, statusCounter)
 }
 
 func MetricMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		// Increment the request counter
-		ww := &responseWriter{ResponseWriter: w} 
+		ww := &responseWriter{ResponseWriter: w}
 		next.ServeHTTP(ww, r)
 		duration := time.Since(start).Seconds()
 		requestCounter.WithLabelValues(r.URL.Path, r.Method).Inc()

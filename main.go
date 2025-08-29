@@ -160,7 +160,6 @@ func main() {
 	// GET /engines/{id} - Retrieve a specific engine by its UUID
 	protected.HandleFunc("/engines/{id}", engineHandler.GetEngineByID).Methods("GET")
 
-
 	// POST /engines - Create a new engine record
 	protected.HandleFunc("/engines", engineHandler.CreateEngine).Methods("POST")
 

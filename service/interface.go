@@ -114,5 +114,4 @@ type EngineServiceInterface interface {
 	//   - *models.Engine: Pointer to the deleted engine record
 	//   - error: Dependency violation or deletion failure
 	DeleteEngine(ctx context.Context, id string) (*models.Engine, error)
-
 }

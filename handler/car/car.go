@@ -2,13 +2,13 @@ package car
 
 import (
 	"encoding/json"
-	"io"
-	"log"
-	"net/http"
 	"github.com/PrateekKumar15/CarZone/models"
 	"github.com/PrateekKumar15/CarZone/service"
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/otel"
+	"io"
+	"log"
+	"net/http"
 )
 
 // CarHandler struct to handle car-related requests

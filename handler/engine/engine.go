@@ -1,19 +1,20 @@
 package engine
 
 import (
-	"fmt"
-	"net/http"
-	"github.com/PrateekKumar15/CarZone/service"
 	"encoding/json"
-	"github.com/gorilla/mux"
+	"fmt"
 	"github.com/PrateekKumar15/CarZone/models"
-	"io"
+	"github.com/PrateekKumar15/CarZone/service"
+	"github.com/gorilla/mux"
 	"go.opentelemetry.io/otel"
-)	
+	"io"
+	"net/http"
+)
 
 type EngineHandler struct {
-	service  service.EngineServiceInterface
+	service service.EngineServiceInterface
 }
+
 func NewEngineHandler(service service.EngineServiceInterface) *EngineHandler {
 	return &EngineHandler{service: service}
 }
@@ -40,14 +41,14 @@ func (h *EngineHandler) GetEngineByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Engine not found", http.StatusNotFound)
 		return
 	}
-	body,err := json.Marshal(engine)
+	body, err := json.Marshal(engine)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error marshalling response: %v", err), http.StatusInternalServerError)
 		return
 	}
-w.Header().Set("Content-Type", "application/json")
-w.WriteHeader(http.StatusOK)
-	_,err = w.Write(body)	
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(body)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error writing response: %v", err), http.StatusInternalServerError)
 		return
@@ -59,7 +60,7 @@ func (h *EngineHandler) CreateEngine(w http.ResponseWriter, r *http.Request) {
 	tracer := otel.Tracer("EngineHandler")
 	ctx, span := tracer.Start(ctx, "CreateEngine-Handler")
 	defer span.End()
-	body,err := io.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
 		return
@@ -118,7 +119,7 @@ func (h *EngineHandler) UpdateEngine(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(updatedEngineJSON)
-	
+
 }
 
 func (h *EngineHandler) DeleteEngine(w http.ResponseWriter, r *http.Request) {
@@ -145,8 +146,5 @@ func (h *EngineHandler) DeleteEngine(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(body)
-	
+
 }
-
-
-
