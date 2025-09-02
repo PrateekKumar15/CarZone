@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+
 	// Database connection management
 	"github.com/PrateekKumar15/CarZone/driver"
 
@@ -27,10 +28,13 @@ import (
 	engineStore "github.com/PrateekKumar15/CarZone/store/engine"
 
 	// Third-party dependencies
-	loginHandler "github.com/PrateekKumar15/CarZone/handler/login"
+	authHandler "github.com/PrateekKumar15/CarZone/handler/auth"
 	"github.com/PrateekKumar15/CarZone/middleware"
+	authService "github.com/PrateekKumar15/CarZone/service/auth"
+	userStore "github.com/PrateekKumar15/CarZone/store/user"
 	"github.com/gorilla/mux"   // HTTP router and URL matcher
 	"github.com/joho/godotenv" // Environment variable loader
+
 	// "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/otel"
@@ -38,7 +42,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+
 	// Prometheus metrics
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -89,14 +94,17 @@ func main() {
 	// Data Access Layer (Stores) - Handle database operations
 	carStore := carStore.New(db)
 	engineStore := engineStore.New(db)
+	userStore := userStore.New(db)
 
 	// Business Logic Layer (Services) - Handle domain logic and validation
 	carService := carService.NewCarService(carStore)
 	engineService := engineService.NewEngineService(engineStore)
+	authService := authService.NewAuthService(userStore)
 
 	// Presentation Layer (Handlers) - Handle HTTP requests/responses
 	carHandler := carHandler.NewCarHandler(carService)
 	engineHandler := engineHandler.NewEngineHandler(engineService)
+	authHandler := authHandler.NewAuthHandler(authService)
 
 	// Step 4: Configure HTTP routing using Gorilla Mux
 	router := mux.NewRouter()
@@ -125,8 +133,10 @@ func main() {
 		log.Fatalf("Failed to execute schema file %s: %v", schemaFile, err)
 	}
 	router.Use((otelmux.Middleware("CarZone")))
-	// Authentication endpoint
-	router.HandleFunc("/login", loginHandler.LoginHandler).Methods("POST")
+	// Authentication endpoints
+	router.HandleFunc("/login", authHandler.LoginHandler).Methods("POST")
+	router.HandleFunc("/register", authHandler.RegisterHandler).Methods("POST")
+	router.HandleFunc("/logout", authHandler.LogoutHandler).Methods("GET")
 	// Prometheus metrics endpoint
 	router.Handle("/metrics", promhttp.Handler())
 	// Public endpoints (no auth required)
