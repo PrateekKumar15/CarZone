@@ -115,3 +115,24 @@ type EngineServiceInterface interface {
 	//   - error: Dependency violation or deletion failure
 	DeleteEngine(ctx context.Context, id string) (*models.Engine, error)
 }
+
+// AuthServiceInterface defines the contract for user authentication and management.
+// This interface encapsulates all business operations related to user accounts,
+// including registration, authentication, and user data management.
+// It ensures security best practices and compliance with authentication standards.
+type AuthServiceInterface interface {
+	// RegisterUser registers a new user with full validation and security checks.
+	// Validates user input, enforces password policies, and coordinates with data persistence.
+	// Parameters:
+	//   - ctx: Request context for transaction management
+	//   - userReq: User registration request with necessary fields
+	// Returns:
+	//   - error: Validation error, business rule violation, or data access error
+	RegisterUser(ctx context.Context, userReq models.UserRequest) error
+
+	// Additional authentication-related methods can be defined here,
+	// such as Login, Logout, PasswordReset, etc., following similar patterns.
+	LoginUser(ctx context.Context, loginReq models.LoginRequest) (models.User, error)
+}
+	
+

@@ -2,17 +2,70 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
-var jwtKey = []byte("your_secret_key") // Replace with your actual secret key
+// Define a custom type for context keys to avoid collisions
+type contextKey string
 
-type Claims struct {
-	UserName string `json:"username"`
-	jwt.StandardClaims
+const (
+	emailContextKey contextKey = "email"
+)
+
+func getSecretKey() string {
+	secret := os.Getenv("SECRET_KEY")
+	if secret == "" {
+		return "your_secret_key" // fallback for development
+	}
+	return secret
+}
+
+// ValidateToken validates a JWT token and returns the email (stored in Subject) if valid
+func ValidateToken(tokenString string) (string, error) {
+	if tokenString == "" {
+		return "", errors.New("empty token")
+	}
+
+	// Accept tokens prefixed with "Bearer "
+	if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
+		tokenString = tokenString[7:]
+	}
+
+	secretKey := getSecretKey()
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// Validate signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("invalid signing method")
+		}
+		return []byte(secretKey), nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	claims, ok := token.Claims.(*jwt.StandardClaims)
+	if !ok || !token.Valid {
+		return "", errors.New("invalid token")
+	}
+
+	// Check expiry if present
+	if claims.ExpiresAt != 0 && time.Now().Unix() > claims.ExpiresAt {
+		return "", errors.New("token expired")
+	}
+
+	if claims.Subject == "" {
+		return "", errors.New("email not found in token")
+	}
+
+	// Subject contains the email
+	return claims.Subject, nil
 }
 
 func AuthMiddleware(next http.Handler) http.Handler {
@@ -36,17 +89,15 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		claims := &Claims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			return jwtKey, nil
-		})
-
-		if err != nil || !token.Valid {
-			http.Error(w, "Invalid Token", http.StatusUnauthorized)
+		// Validate the token using the same logic as in auth handler
+		email, err := ValidateToken(tokenString)
+		if err != nil {
+			http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "username", claims.UserName)
+		// Add the email to the request context
+		ctx := context.WithValue(r.Context(), emailContextKey, email)
 		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)
