@@ -14,10 +14,27 @@ DROP CONSTRAINT IF EXISTS fk_engine_id;
 -- Drop existing tables if they exist (for complete reset)
 DROP TABLE IF EXISTS car;
 DROP TABLE IF EXISTS engine;
+DROP TABLE IF EXISTS users;
 
 -- =============================================================================
 -- TABLE DEFINITIONS
 -- =============================================================================
+
+-- Users Table Definition
+-- Stores user account information for authentication and authorization
+CREATE TABLE users (
+    -- Primary key: Unique identifier for each user
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- User account information
+    name VARCHAR(255) NOT NULL,                                   -- User's full name or username
+    email VARCHAR(255) NOT NULL UNIQUE,                          -- User's email address (unique)
+    password_hash VARCHAR(255) NOT NULL,                         -- Hashed password for security
+    
+    -- Audit trail columns for tracking changes
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,              -- Account creation timestamp
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP               -- Last update timestamp
+);
 
 -- Engine Table Definition
 -- Stores engine specifications and technical details
@@ -76,6 +93,9 @@ ON DELETE CASCADE;                                               -- Delete cars 
 -- INDEXES FOR PERFORMANCE
 -- =============================================================================
 
+-- Index on user email for fast authentication queries
+CREATE INDEX idx_users_email ON users(email);
+
 -- Index on car brand for fast brand-based queries
 CREATE INDEX idx_car_brand ON car(brand);
 
@@ -102,6 +122,11 @@ END;
 $$ language 'plpgsql';
 
 -- Triggers to automatically update updated_at when records are modified
+CREATE TRIGGER update_users_updated_at 
+    BEFORE UPDATE ON users 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_engine_updated_at 
     BEFORE UPDATE ON engine 
     FOR EACH ROW 
@@ -116,7 +141,17 @@ CREATE TRIGGER update_car_updated_at
 -- SAMPLE DATA FOR TESTING AND DEVELOPMENT
 -- =============================================================================
 
--- Insert sample engine data
+-- Insert sample user data for testing
+-- Passwords are hashed using bcrypt (these are sample hashes for 'password123')
+INSERT INTO users (id, name, email, password_hash) VALUES
+    -- Test user 1
+    ('11111111-0000-4000-8000-000000000001', 'John Doe', 'john.doe@example.com', '$2a$10$N9qo8uLOickgx2ZMRZoMye.q7.q7.q7.q7.q7.q7.q7.q7.q7.q7'),
+    
+    -- Test user 2
+    ('22222222-0000-4000-8000-000000000002', 'Jane Smith', 'jane.smith@example.com', '$2a$10$N9qo8uLOickgx2ZMRZoMye.q7.q7.q7.q7.q7.q7.q7.q7.q7.q7'),
+    
+    -- Admin user
+    ('33333333-0000-4000-8000-000000000003', 'Admin User', 'admin@carzone.com', '$2a$10$N9qo8uLOickgx2ZMRZoMye.q7.q7.q7.q7.q7.q7.q7.q7.q7.q7');-- Insert sample engine data
 -- These engines represent different types: economy, performance, and electric
 INSERT INTO engine (id, displacement, no_of_cylinders, car_range) VALUES
     -- Economy 4-cylinder engine
@@ -158,6 +193,7 @@ INSERT INTO car (id, name, year, brand, fuel_type, engine_id, price) VALUES
 -- Query to verify data insertion and relationships
 -- Uncomment these lines to verify the setup (useful for debugging)
 
+-- SELECT 'Users Count' as info, COUNT(*) as count FROM users;
 -- SELECT 'Engine Count' as info, COUNT(*) as count FROM engine;
 -- SELECT 'Car Count' as info, COUNT(*) as count FROM car;  
 -- SELECT c.name, c.brand, c.year, c.fuel_type, c.price, e.displacement, e.no_of_cylinders, e.car_range

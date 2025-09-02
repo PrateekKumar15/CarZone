@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"time"
-
 	"github.com/PrateekKumar15/CarZone/models"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
@@ -24,9 +23,25 @@ func (s CarStore) GetCarByID(ctx context.Context, id string) (models.Car, error)
 	ctx, span := tracer.Start(ctx, "GetCarByID-Store")
 	defer span.End()
 	var car models.Car
+	//  Begin the transaction
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return models.Car{}, err // Return error if transaction cannot be started
+	}
+	// Insert the car into the database
+	defer func() {
+		if err != nil {
+			tx.Rollback() // Rollback the transaction in case of error
+			return
+		}
+		err = tx.Commit() // Commit the transaction if no error
+		if err != nil {
+			return
+		}
+	}()
 	query := "SELECT c.id, c.name, c.year, c.brand, c.fuel_type, c.engine_id, c.price, c.created_at, c.updated_at, e.id, e.displacement, e.no_of_cylinders, e.car_range FROM car c LEFT JOIN engine e ON c.engine_id = e.id WHERE c.id = $1"
 	row := s.db.QueryRowContext(ctx, query, id)
-	err := row.Scan(&car.ID, &car.Name, &car.Year, &car.Brand, &car.FuelType, &car.Engine.ID, &car.Price, &car.CreatedAt, &car.UpdatedAt, &car.Engine.ID, &car.Engine.Displacement, &car.Engine.NoOfCylinders, &car.Engine.CarRange)
+	err = row.Scan(&car.ID, &car.Name, &car.Year, &car.Brand, &car.FuelType, &car.Engine.ID, &car.Price, &car.CreatedAt, &car.UpdatedAt, &car.Engine.ID, &car.Engine.Displacement, &car.Engine.NoOfCylinders, &car.Engine.CarRange)
 	if err != nil {
 		switch err {
 		case sql.ErrNoRows:
@@ -88,7 +103,7 @@ func (s CarStore) CreateCar(ctx context.Context, carReq models.CarRequest) (mode
 	defer span.End()
 	var createdCar models.Car
 	var engineID uuid.UUID
-
+	
 	err := s.db.QueryRowContext(ctx, "Select id from engine where id = $1", carReq.Engine.ID).Scan(&engineID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -224,6 +239,22 @@ func (s CarStore) GetAllCars(ctx context.Context) ([]models.Car, error) {
 	ctx, span := tracer.Start(ctx, "GetAllCars-Store")
 	defer span.End()
 	var cars []models.Car
+	//  Begin the transaction
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return cars, err // Return error if transaction cannot be started
+	}
+	// Insert the car into the database
+	defer func() {
+		if err != nil {
+			tx.Rollback() // Rollback the transaction in case of error
+			return
+		}
+		err = tx.Commit() // Commit the transaction if no error
+		if err != nil {
+			return
+		}
+	}()
 	query := "SELECT c.id, c.name, c.year, c.brand, c.fuel_type, c.engine_id, c.price, c.created_at, c.updated_at, e.id, e.displacement, e.no_of_cylinders, e.car_range FROM car c LEFT JOIN engine e ON c.engine_id = e.id"
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {

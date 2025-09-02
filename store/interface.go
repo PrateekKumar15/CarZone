@@ -114,3 +114,24 @@ type EngineStoreInterface interface {
 	//   - error: Error if engine not found or deletion fails due to constraints
 	DeleteEngine(ctx context.Context, id string) (models.Engine, error)
 }
+
+
+// AuthStoreInterface defines the contract for user authentication and management operations.
+// This interface abstracts all database operations related to user entities,
+// following the Repository pattern to decouple business logic from data persistence.
+// All methods accept a context for request scoping, cancellation, and timeout handling.
+type UserStoreInterface interface {
+	// CreateUser inserts a new user record into the database.
+	// The method generates a new UUID for the user and handles all creation logic.
+	// Parameters:
+	//   - ctx: Request context for transaction management
+	//   - userReq: User data to be inserted (without ID, timestamps)
+	// Returns:
+	//   - models.User: The created user record with generated ID and timestamps
+	//   - error: Error if creation fails or validation errors occur
+	CreateUser(ctx context.Context, userReq models.UserRequest) (error)
+	GetUser(ctx context.Context, email, password string) (models.User, error)
+	UpdateUser(ctx context.Context, id string, userReq models.UserRequest) (models.User, error)
+	DeleteUser(ctx context.Context, id string) (models.User, error)
+	GetAllUsers(ctx context.Context) ([]models.User, error)
+}
