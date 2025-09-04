@@ -95,8 +95,6 @@ func GenerateTokenAndSetCookie(w http.ResponseWriter, email string) (string, err
 	return signedToken, nil
 }
 
-
-
 // ValidateToken validates a JWT token and returns the email (stored in Subject) if valid
 func ValidateToken(tokenString string) (string, error) {
 	if tokenString == "" {
@@ -194,11 +192,11 @@ func (h *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	// Clear the auth_token cookie by setting its MaxAge to -1
 	http.SetCookie(w, &http.Cookie{
-		Name:     "auth_token",
-		Value:    "",		
-		MaxAge:  -1 ,
+		Name:   "auth_token",
+		Value:  "",
+		MaxAge: -1,
 	})
-	
+
 	response := map[string]interface{}{
 		"message": "Logout successful",
 	}

@@ -15,17 +15,14 @@ import (
 	// Database connection management
 	"github.com/PrateekKumar15/CarZone/driver"
 
-	// HTTP handlers for car and engine endpoints
+	// HTTP handlers for car endpoints
 	carHandler "github.com/PrateekKumar15/CarZone/handler/car"
-	engineHandler "github.com/PrateekKumar15/CarZone/handler/engine"
 
 	// Business logic services
 	carService "github.com/PrateekKumar15/CarZone/service/car"
-	engineService "github.com/PrateekKumar15/CarZone/service/engine"
 
 	// Data access layer stores
 	carStore "github.com/PrateekKumar15/CarZone/store/car"
-	engineStore "github.com/PrateekKumar15/CarZone/store/engine"
 
 	// Third-party dependencies
 	authHandler "github.com/PrateekKumar15/CarZone/handler/auth"
@@ -93,17 +90,15 @@ func main() {
 	// Step 3: Set up dependency injection chain following clean architecture
 	// Data Access Layer (Stores) - Handle database operations
 	carStore := carStore.New(db)
-	engineStore := engineStore.New(db)
+
 	userStore := userStore.New(db)
 
 	// Business Logic Layer (Services) - Handle domain logic and validation
 	carService := carService.NewCarService(carStore)
-	engineService := engineService.NewEngineService(engineStore)
 	authService := authService.NewAuthService(userStore)
 
 	// Presentation Layer (Handlers) - Handle HTTP requests/responses
 	carHandler := carHandler.NewCarHandler(carService)
-	engineHandler := engineHandler.NewEngineHandler(engineService)
 	authHandler := authHandler.NewAuthHandler(authService)
 
 	// Step 4: Configure HTTP routing using Gorilla Mux
@@ -157,27 +152,14 @@ func main() {
 	// GET /cars/brand?brand={brand}&engine={true/false} - Retrieve cars by brand with optional engine details
 	protected.HandleFunc("/carbybrand", carHandler.GetCarByBrand).Methods("GET")
 
-	// POST /cars - Create a new car record
-	protected.HandleFunc("/cars", carHandler.CreateCar).Methods("POST")
+	// POST /cars - Create a new car record (with simple image upload)
+	protected.Handle("/cars", middleware.ImageUploadMiddleware(http.HandlerFunc(carHandler.CreateCar))).Methods("POST")
 
-	// PUT /cars/{id} - Update an existing car by its UUID
-	protected.HandleFunc("/cars/{id}", carHandler.UpdateCar).Methods("PUT")
+	// PUT /cars/{id} - Update an existing car by its UUID (with simple image upload)
+	protected.Handle("/cars/{id}", middleware.ImageUploadMiddleware(http.HandlerFunc(carHandler.UpdateCar))).Methods("PUT")
 
 	// DELETE /cars/{id} - Delete a car by its UUID
 	protected.HandleFunc("/cars/{id}", carHandler.DeleteCar).Methods("DELETE")
-
-	// Engine-related endpoints
-	// GET /engines/{id} - Retrieve a specific engine by its UUID
-	protected.HandleFunc("/engines/{id}", engineHandler.GetEngineByID).Methods("GET")
-
-	// POST /engines - Create a new engine record
-	protected.HandleFunc("/engines", engineHandler.CreateEngine).Methods("POST")
-
-	// PUT /engines/{id} - Update an existing engine by its UUID
-	protected.HandleFunc("/engines/{id}", engineHandler.UpdateEngine).Methods("PUT")
-
-	// DELETE /engines/{id} - Delete an engine by its UUID
-	protected.HandleFunc("/engines/{id}", engineHandler.DeleteEngine).Methods("DELETE")
 
 	// Step 5: Start the HTTP server
 	// Get port from environment variables with fallback to default
