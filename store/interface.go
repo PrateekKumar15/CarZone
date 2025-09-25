@@ -145,3 +145,80 @@ type UserStoreInterface interface {
 	//   - error: Error if database operation fails
 	GetUsersByRole(ctx context.Context, role string) ([]models.User, error)
 }
+
+// BookingStoreInterface defines the contract for booking data access operations.
+// This interface abstracts all database operations related to booking entities,
+// following the Repository pattern to decouple business logic from data persistence.
+type BookingStoreInterface interface {
+	// GetBookingByID retrieves a single booking record by its unique identifier.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - id: Unique identifier of the booking (UUID string format)
+	// Returns:
+	//   - models.Booking: The booking record if found
+	//   - error: Error if booking not found or database operation fails
+	GetBookingByID(ctx context.Context, id string) (models.Booking, error)
+
+	// GetBookingsByCustomerID retrieves all bookings for a specific customer.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - customerID: Customer's unique identifier
+	// Returns:
+	//   - []models.Booking: Slice of booking records for the customer
+	//   - error: Error if database operation fails
+	GetBookingsByCustomerID(ctx context.Context, customerID string) ([]models.Booking, error)
+
+	// GetBookingsByCarID retrieves all bookings for a specific car.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - carID: Car's unique identifier
+	// Returns:
+	//   - []models.Booking: Slice of booking records for the car
+	//   - error: Error if database operation fails
+	GetBookingsByCarID(ctx context.Context, carID string) ([]models.Booking, error)
+
+	// GetBookingsByOwnerID retrieves all bookings for cars owned by a specific owner.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - ownerID: Owner's unique identifier
+	// Returns:
+	//   - []models.Booking: Slice of booking records for the owner's cars
+	//   - error: Error if database operation fails
+	GetBookingsByOwnerID(ctx context.Context, ownerID string) ([]models.Booking, error)
+
+	// CreateBooking inserts a new booking record into the database.
+	// Parameters:
+	//   - ctx: Request context for transaction management
+	//   - bookingReq: Booking data to be inserted
+	// Returns:
+	//   - models.Booking: The created booking record with generated ID and timestamps
+	//   - error: Error if creation fails or validation errors occur
+	CreateBooking(ctx context.Context, bookingReq models.BookingRequest) (models.Booking, error)
+
+	// UpdateBookingStatus updates the status of an existing booking.
+	// Parameters:
+	//   - ctx: Request context for transaction management
+	//   - id: Unique identifier of the booking to update
+	//   - status: New booking status
+	// Returns:
+	//   - models.Booking: The updated booking record
+	//   - error: Error if booking not found or update operation fails
+	UpdateBookingStatus(ctx context.Context, id string, status models.BookingStatus) (models.Booking, error)
+
+	// DeleteBooking removes a booking record from the database.
+	// Parameters:
+	//   - ctx: Request context for transaction management
+	//   - id: Unique identifier of the booking to delete
+	// Returns:
+	//   - models.Booking: The deleted booking record
+	//   - error: Error if booking not found or deletion fails
+	DeleteBooking(ctx context.Context, id string) (models.Booking, error)
+
+	// GetAllBookings retrieves all booking records.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	// Returns:
+	//   - []models.Booking: Slice of all booking records
+	//   - error: Error if database operation fails
+	GetAllBookings(ctx context.Context) ([]models.Booking, error)
+}

@@ -15,34 +15,38 @@ import (
 	// Database connection management
 	"github.com/PrateekKumar15/CarZone/driver"
 
+	// Routes layer
+	"github.com/PrateekKumar15/CarZone/routes"
+
 	// HTTP handlers for car endpoints
 	carHandler "github.com/PrateekKumar15/CarZone/handler/car"
+
+	// HTTP handlers for booking endpoints
+	bookingHandler "github.com/PrateekKumar15/CarZone/handler/booking"
 
 	// Business logic services
 	carService "github.com/PrateekKumar15/CarZone/service/car"
 
+	// Business logic services for booking
+	bookingService "github.com/PrateekKumar15/CarZone/service/booking"
+
 	// Data access layer stores
 	carStore "github.com/PrateekKumar15/CarZone/store/car"
 
+	// Data access layer for booking
+	bookingStore "github.com/PrateekKumar15/CarZone/store/booking"
+
 	// Third-party dependencies
 	authHandler "github.com/PrateekKumar15/CarZone/handler/auth"
-	"github.com/PrateekKumar15/CarZone/middleware"
 	authService "github.com/PrateekKumar15/CarZone/service/auth"
 	userStore "github.com/PrateekKumar15/CarZone/store/user"
-	"github.com/gorilla/mux"   // HTTP router and URL matcher
 	"github.com/joho/godotenv" // Environment variable loader
-
-	// "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-
-	// Prometheus metrics
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // main is the entry point of the CarZone application.
@@ -91,23 +95,28 @@ func main() {
 	// Data Access Layer (Stores) - Handle database operations
 	carStore := carStore.New(db)
 
+	bookingStore := bookingStore.New(db)
+
 	userStore := userStore.New(db)
 
 	// Business Logic Layer (Services) - Handle domain logic and validation
 	carService := carService.NewCarService(carStore)
+	bookingService := bookingService.NewBookingService(bookingStore, carStore)
 	authService := authService.NewAuthService(userStore)
 
 	// Presentation Layer (Handlers) - Handle HTTP requests/responses
 	carHandler := carHandler.NewCarHandler(carService)
+	bookingHandler := bookingHandler.NewBookingHandler(bookingService)
 	authHandler := authHandler.NewAuthHandler(authService)
 
-	// Step 4: Configure HTTP routing using Gorilla Mux
-	router := mux.NewRouter()
+	// Step 4: Initialize routes using the routes layer
+	// Create router with all handler dependencies injected
+	routeManager := routes.NewRouter(authHandler, carHandler, bookingHandler)
+	router := routeManager.SetupRoutes()
 
 	// Execute schema file to set up database structure
 	// This is typically done once during application startup
 	// It ensures the database is ready for operations
-	// This function executes the SQL commands in the schema file
 	executeSchemaFile := func(db *sql.DB, schemaFile string) error {
 		schema, err := os.ReadFile(schemaFile)
 		if err != nil {
@@ -127,39 +136,6 @@ func main() {
 	if err := executeSchemaFile(db, schemaFile); err != nil {
 		log.Fatalf("Failed to execute schema file %s: %v", schemaFile, err)
 	}
-	router.Use((otelmux.Middleware("CarZone")))
-	// Authentication endpoints
-	router.HandleFunc("/login", authHandler.LoginHandler).Methods("POST")
-	router.HandleFunc("/register", authHandler.RegisterHandler).Methods("POST")
-	router.HandleFunc("/logout", authHandler.LogoutHandler).Methods("GET")
-	// Prometheus metrics endpoint
-	router.Handle("/metrics", promhttp.Handler())
-	// Public endpoints (no auth required)
-	// You can add more public endpoints here if needed
-
-	// Protected endpoints (require authentication)
-	protected := router.PathPrefix("/").Subrouter()
-	protected.Use(middleware.AuthMiddleware)
-	protected.Use(middleware.MetricMiddleware)
-
-	// Car-related endpoints
-	// GET /cars/all - Retrieve all cars (must come before /cars/{id})
-	protected.HandleFunc("/cars", carHandler.GetAllCars).Methods("GET")
-
-	// GET /cars/{id} - Retrieve a specific car by its UUID
-	protected.HandleFunc("/cars/{id}", carHandler.GetCarByID).Methods("GET")
-
-	// GET /cars/brand?brand={brand}&engine={true/false} - Retrieve cars by brand with optional engine details
-	protected.HandleFunc("/carbybrand", carHandler.GetCarByBrand).Methods("GET")
-
-	// POST /cars - Create a new car record (with simple image upload)
-	protected.Handle("/cars", middleware.ImageUploadMiddleware(http.HandlerFunc(carHandler.CreateCar))).Methods("POST")
-
-	// PUT /cars/{id} - Update an existing car by its UUID (with simple image upload)
-	protected.Handle("/cars/{id}", middleware.ImageUploadMiddleware(http.HandlerFunc(carHandler.UpdateCar))).Methods("PUT")
-
-	// DELETE /cars/{id} - Delete a car by its UUID
-	protected.HandleFunc("/cars/{id}", carHandler.DeleteCar).Methods("DELETE")
 
 	// Step 5: Start the HTTP server
 	// Get port from environment variables with fallback to default
@@ -168,11 +144,38 @@ func main() {
 		port = "8080" // Default port if not set in environment variables
 	}
 
-	// Log server startup information
+	// Log server startup information with organized route categories
 	log.Printf("Starting CarZone server on port %s", port)
-	log.Println("Available endpoints:")
-	log.Println("Cars: GET,POST /cars | GET,PUT,DELETE /cars/{id}")
-	log.Println("Engines: GET,POST /engines | GET,PUT,DELETE /engines/{id}")
+	log.Println("🚀 CarZone API Server Started Successfully!")
+	log.Println("")
+	log.Println("📋 Available API Routes:")
+	log.Println("  🔐 Authentication (Public):")
+	log.Println("    POST /auth/register  - Register new user account")
+	log.Println("    POST /auth/login     - User authentication")
+	log.Println("    GET  /auth/logout    - User logout")
+	log.Println("")
+	log.Println("  🚗 Car Management (Protected):")
+	log.Println("    GET    /cars           - Get all cars")
+	log.Println("    GET    /cars/{id}      - Get car by ID")
+	log.Println("    GET    /cars/brand     - Get cars by brand")
+	log.Println("    POST   /cars           - Create new car")
+	log.Println("    PUT    /cars/{id}      - Update car")
+	log.Println("    DELETE /cars/{id}      - Delete car")
+	log.Println("")
+	log.Println("  📅 Booking Management (Protected):")
+	log.Println("    GET    /bookings                    - Get all bookings")
+	log.Println("    GET    /bookings/{id}               - Get booking by ID")
+	log.Println("    POST   /bookings                    - Create new booking")
+	log.Println("    DELETE /bookings/{id}               - Delete booking")
+	log.Println("    PUT    /bookings/{id}/status        - Update booking status")
+	log.Println("    GET    /bookings/customer/{id}      - Get bookings by customer")
+	log.Println("    GET    /bookings/car/{id}           - Get bookings by car")
+	log.Println("    GET    /bookings/owner/{id}         - Get bookings by owner")
+	log.Println("")
+	log.Println("  📊 Monitoring:")
+	log.Println("    GET /metrics - Prometheus metrics")
+	log.Println("")
+	log.Println("✨ Routes are organized using the new routes layer for better maintainability!")
 
 	// Start the HTTP server - this blocks until server shuts down
 	if err := http.ListenAndServe(":"+port, router); err != nil {

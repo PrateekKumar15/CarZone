@@ -93,3 +93,82 @@ type AuthServiceInterface interface {
 	//   - error: Authentication error or data access error
 	LoginUser(ctx context.Context, loginReq models.LoginRequest) (models.User, error)
 }
+
+// BookingServiceInterface defines the contract for booking business logic operations.
+// This interface abstracts all business operations related to booking entities,
+// including validation, business rule enforcement, and coordination with the data layer.
+type BookingServiceInterface interface {
+	// GetBookingByID retrieves a booking by its unique identifier with business logic applied.
+	// Parameters:
+	//   - ctx: Request context for cancellation, timeout, and request scoping
+	//   - id: Unique identifier of the booking (UUID string format)
+	// Returns:
+	//   - *models.Booking: Pointer to the booking record if found, nil if not found
+	//   - error: Business logic error or underlying data access error
+	GetBookingByID(ctx context.Context, id string) (*models.Booking, error)
+
+	// GetBookingsByCustomerID retrieves all bookings for a specific customer.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - customerID: Customer's unique identifier
+	// Returns:
+	//   - *[]models.Booking: Pointer to slice of booking records for the customer
+	//   - error: Business logic error or data access error
+	GetBookingsByCustomerID(ctx context.Context, customerID string) (*[]models.Booking, error)
+
+	// GetBookingsByCarID retrieves all bookings for a specific car.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - carID: Car's unique identifier
+	// Returns:
+	//   - *[]models.Booking: Pointer to slice of booking records for the car
+	//   - error: Business logic error or data access error
+	GetBookingsByCarID(ctx context.Context, carID string) (*[]models.Booking, error)
+
+	// GetBookingsByOwnerID retrieves all bookings for cars owned by a specific owner.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - ownerID: Owner's unique identifier
+	// Returns:
+	//   - *[]models.Booking: Pointer to slice of booking records for the owner's cars
+	//   - error: Business logic error or data access error
+	GetBookingsByOwnerID(ctx context.Context, ownerID string) (*[]models.Booking, error)
+
+	// CreateBooking creates a new booking with full business validation.
+	// Validates input data, enforces business rules, and coordinates with data persistence.
+	// Parameters:
+	//   - ctx: Request context for transaction management
+	//   - bookingReq: Booking creation request with all required fields
+	// Returns:
+	//   - *models.Booking: Pointer to the created booking record with generated fields
+	//   - error: Validation error, business rule violation, or data access error
+	CreateBooking(ctx context.Context, bookingReq models.BookingRequest) (*models.Booking, error)
+
+	// UpdateBookingStatus modifies booking status with business validation.
+	// Validates status transitions and enforces business rules.
+	// Parameters:
+	//   - ctx: Request context for transaction management
+	//   - id: Unique identifier of the booking to update
+	//   - status: New booking status
+	// Returns:
+	//   - *models.Booking: Pointer to the updated booking record
+	//   - error: Validation error, business rule violation, or update failure
+	UpdateBookingStatus(ctx context.Context, id string, status models.BookingStatus) (*models.Booking, error)
+
+	// DeleteBooking removes a booking record with business rule validation.
+	// Parameters:
+	//   - ctx: Request context for transaction management
+	//   - id: Unique identifier of the booking to delete
+	// Returns:
+	//   - *models.Booking: Pointer to the deleted booking record (for audit purposes)
+	//   - error: Business rule violation or deletion failure
+	DeleteBooking(ctx context.Context, id string) (*models.Booking, error)
+
+	// GetAllBookings retrieves all booking records with business filtering.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	// Returns:
+	//   - *[]models.Booking: Pointer to slice of all booking records
+	//   - error: Business logic error or data access error
+	GetAllBookings(ctx context.Context) (*[]models.Booking, error)
+}
