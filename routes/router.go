@@ -31,6 +31,9 @@ func NewRouter(authHandler *authHandler.AuthHandler, carHandler *carHandler.CarH
 func (r *Router) SetupRoutes() *mux.Router {
 	router := mux.NewRouter()
 
+	// Add CORS middleware first to handle all requests
+	router.Use(middleware.CORSMiddleware)
+
 	// Add OpenTelemetry middleware for tracing
 	router.Use(otelmux.Middleware("CarZone"))
 
