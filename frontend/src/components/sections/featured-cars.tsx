@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Users, Fuel, Settings, Star, ArrowRight } from "lucide-react";
-import { carsData } from "@/lib/cars-data";
+import { featuredCars } from "@/lib/cars-data";
 
 // Register ScrollTrigger plugin
 if (typeof window !== "undefined") {
@@ -16,7 +16,7 @@ if (typeof window !== "undefined") {
 const FeaturedCars = () => {
   const sectionRef = useRef(null);
   const [activeFilter, setActiveFilter] = useState("All");
-  const [filteredCars, setFilteredCars] = useState(carsData);
+  const [filteredCars, setFilteredCars] = useState(featuredCars);
 
   const categories = [
     "All",
@@ -57,10 +57,12 @@ const FeaturedCars = () => {
 
   useEffect(() => {
     if (activeFilter === "All") {
-      setFilteredCars(carsData);
+      setFilteredCars(featuredCars);
     } else {
       setFilteredCars(
-        carsData.filter((car) => car.type.includes(activeFilter))
+        featuredCars.filter((car) =>
+          car.fuel_type.toLowerCase().includes(activeFilter.toLowerCase())
+        )
       );
     }
   }, [activeFilter]);
@@ -136,14 +138,14 @@ const FeaturedCars = () => {
               <div className="relative h-64 overflow-hidden">
                 <Image
                   src={car.image}
-                  alt={car.name}
+                  alt={`${car.brand} ${car.model}`}
                   width={400}
                   height={300}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
                 <div className="absolute top-4 left-4">
                   <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                    {car.type}
+                    {car.fuel_type}
                   </span>
                 </div>
                 <div className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-md">
@@ -157,9 +159,9 @@ const FeaturedCars = () => {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                      {car.name}
+                      {car.brand} {car.model}
                     </h3>
-                    <p className="text-gray-600">{car.type}</p>
+                    <p className="text-gray-600">{car.year}</p>
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-blue-600">
@@ -174,12 +176,14 @@ const FeaturedCars = () => {
                   <div className="flex items-center space-x-2">
                     <Users className="h-4 w-4 text-gray-400" />
                     <span className="text-sm text-gray-600">
-                      {car.seats} Seats
+                      {car.reviews} Reviews
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Fuel className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">{car.fuel}</span>
+                    <span className="text-sm text-gray-600">
+                      {car.fuel_type}
+                    </span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Settings className="h-4 w-4 text-gray-400" />

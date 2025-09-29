@@ -1,146 +1,64 @@
-export interface CarData {
+﻿// Featured cars data for the landing page
+export interface FeaturedCar {
   id: number;
-  name: string;
-  type: string;
+  brand: string;
+  model: string;
+  year: number;
   price: number;
   image: string;
-  seats: number;
-  fuel: string;
-  mileage: string;
+  fuel_type: string;
   transmission: string;
+  mileage: number;
+  rating: number;
+  reviews: number;
+  features: string[];
 }
 
-export const carsData: CarData[] = [
+export const featuredCars: FeaturedCar[] = [
   {
-    id: 7,
-    name: "Tesla Model S",
-    type: "Luxury Electric",
-    price: 30000,
-    image: "/C1.png",
-    seats: 5,
-    fuel: "Electric",
-    mileage: "Unlimited",
+    id: 1,
+    brand: "BMW",
+    model: "X5",
+    year: 2023,
+    price: 65000,
+    image: "/images/cars/bmw-x5.jpg",
+    fuel_type: "Petrol",
     transmission: "Automatic",
+    mileage: 15000,
+    rating: 4.8,
+    reviews: 127,
+    features: [
+      "Leather Seats",
+      "Sunroof",
+      "Navigation",
+      "Bluetooth",
+      "Backup Camera",
+    ],
   },
   {
-    id: 8,
-    name: "BMW M5",
-    type: "Sports Sedan",
-    price: 24000,
-    image: "/C2.png",
-    seats: 5,
-    fuel: "Premium",
-    mileage: "22 MPG",
+    id: 2,
+    brand: "Mercedes",
+    model: "C-Class",
+    year: 2023,
+    price: 45000,
+    image: "/images/cars/mercedes-c-class.jpg",
+    fuel_type: "Petrol",
     transmission: "Automatic",
+    mileage: 12000,
+    rating: 4.7,
+    reviews: 89,
+    features: [
+      "Premium Audio",
+      "Heated Seats",
+      "Keyless Entry",
+      "LED Headlights",
+    ],
   },
-  {
-    id: 9,
-    name: "Mercedes G-Class",
-    type: "Luxury SUV",
-    price: 35000,
-    image: "/C3.png",
-    seats: 5,
-    fuel: "Diesel",
-    mileage: "18 MPG",
-    transmission: "Automatic",
-  },
-  {
-    id: 10,
-    name: "Audi R8",
-    type: "Sports Car",
-    price: 50000,
-    image: "/C4.png",
-    seats: 2,
-    fuel: "Premium",
-    mileage: "15 MPG",
-    transmission: "Automatic",
-  },
-  {
-    id: 11,
-    name: "Range Rover Velar",
-    type: "Premium SUV",
-    price: 40000,
-    image: "/C5.png",
-    seats: 5,
-    fuel: "Diesel",
-    mileage: "28 MPG",
-    transmission: "Automatic",
-  },
-  {
-    id: 12,
-    name: "Porsche 911",
-    type: "Sports Car",
-    price: 42500,
-    image: "/C6.png",
-    seats: 4,
-    fuel: "Premium",
-    mileage: "23 MPG",
-    transmission: "Automatic",
-  },
-  {
-    id: 13,
-    name: "Lamborghini Huracán",
-    type: "Supercar",
-    price: 100000,
-    image: "/C7.png",
-    seats: 2,
-    fuel: "Premium",
-    mileage: "13 MPG",
-    transmission: "Automatic",
-  },
-  {
-    id: 14,
-    name: "Ferrari F8 Tributo",
-    type: "Supercar",
-    price: 150000,
-    image: "/C8.png",
-    seats: 2,
-    fuel: "Premium",
-    mileage: "15 MPG",
-    transmission: "Automatic",
-  },
-  {
-    id: 15,
-    name: "McLaren 720S",
-    type: "Supercar",
-    price: 90000,
-    image: "/C9.png",
-    seats: 2,
-    fuel: "Premium",
-    mileage: "14 MPG",
-    transmission: "Automatic",
-  },
-  {
-    id: 16,
-    name: "Jaguar F-Type",
-    type: "Sports Car",
-    price: 50000,
-    image: "/C10.png",
-    seats: 2,
-    fuel: "Gasoline",
-    mileage: "21 MPG",
-    transmission: "Automatic",
-  },
-  {
-    id: 17,
-    name: "Chevrolet Corvette",
-    type: "Sports Car",
-    price: 150000,
-    image: "/C11.png",
-    seats: 2,
-    fuel: "Premium",
-    mileage: "19 MPG",
-    transmission: "Automatic",
-  },
-  {
-    id: 18,
-    name: "Ford Mustang GT",
-    type: "Muscle Car",
-    price: 200000,
-    image: "/C12.png",
-    seats: 4,
-    fuel: "Gasoline",
-    mileage: "18 MPG",
-    transmission: "Manual",
-  },
+];
+
+// Car categories for filtering
+export const carCategories = [
+  { id: "all", name: "All Cars", icon: "" },
+  { id: "luxury", name: "Luxury", icon: "" },
+  { id: "sports", name: "Sports", icon: "" },
 ];

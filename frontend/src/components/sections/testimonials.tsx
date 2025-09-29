@@ -56,7 +56,9 @@ const Testimonials = () => {
                   />
                 ))}
               </div>
-              <p className="text-gray-600 mb-4">"{testimonial.comment}"</p>
+              <p className="text-gray-600 mb-4">
+                &ldquo;{testimonial.comment}&rdquo;
+              </p>
               <p className="font-semibold text-gray-900">{testimonial.name}</p>
             </motion.div>
           ))}

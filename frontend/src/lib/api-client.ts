@@ -1,37 +1,87 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  phone: string;
+  role: string;
+}
+
 export interface Car {
-  id: number;
+  id: string;
+  owner_id?: string;
+  name: string;
   brand: string;
   model: string;
   year: number;
-  color: string;
-  price_per_day: number;
-  available: boolean;
-  owner_id: number;
+  color?: string;
+  vin?: string;
+  fuel_type: string;
+  engine: Engine;
+  location_city: string;
+  location_state: string;
+  location_country: string;
+  price: {
+    rental_price_daily: number;
+    rental_price_weekly: number;
+    rental_price_monthly: number;
+    sale_price?: number;
+  };
+  status: string;
+  availability_type: string;
+  is_available: boolean;
+  features: Record<string, unknown>;
+  description: string;
+  images: string[];
+  mileage: number;
   created_at: string;
   updated_at: string;
-  images?: string[];
-  features?: string[];
+  // Populated fields
+  owner?: User;
 }
 
-export interface User {
-  id: number;
-  name: string;
-  email: string;
+export interface Engine {
+  engine_size: number;
+  cylinders: number;
+  horsepower: number;
+  torque: number;
+  transmission: string;
 }
 
 export interface Booking {
-  id: number;
-  car_id: number;
-  customer_id: number;
-  owner_id: number;
+  id: string;
+  customer_id: string;
+  car_id: string;
+  owner_id: string;
   start_date: string;
   end_date: string;
   total_cost: number;
   status: string;
   created_at: string;
   updated_at: string;
+  // Populated fields
+  car?: Car;
+  customer?: User;
+  owner?: User;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+  phone: string;
+  role?: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
 }
 
 class ApiClient {
@@ -61,21 +111,21 @@ class ApiClient {
     const response = await fetch(url, config);
 
     if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(
+        `API Error: ${response.status} ${response.statusText} - ${errorText}`
+      );
     }
 
     return response.json();
   }
 
-  // Auth methods
-  async login(email: string, password: string) {
-    const response = await this.request<{ token: string; user: User }>(
-      "/auth/login",
-      {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      }
-    );
+  // Authentication methods
+  async login(data: LoginRequest): Promise<AuthResponse> {
+    const response = await this.request<AuthResponse>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
 
     this.token = response.token;
     if (typeof window !== "undefined") {
@@ -85,20 +135,30 @@ class ApiClient {
     return response;
   }
 
-  async register(name: string, email: string, password: string) {
-    return this.request<{ token: string; user: User }>("/auth/register", {
+  async register(data: RegisterRequest): Promise<AuthResponse> {
+    const response = await this.request<AuthResponse>("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({
+        ...data,
+        role: data.role || "customer",
+      }),
     });
+
+    this.token = response.token;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("auth_token", response.token);
+    }
+
+    return response;
   }
 
-  async logout() {
+  async logout(): Promise<void> {
     if (typeof window !== "undefined") {
       localStorage.removeItem("auth_token");
     }
     this.token = null;
 
-    return this.request("/auth/logout", {
+    await this.request("/auth/logout", {
       method: "GET",
     });
   }
@@ -108,34 +168,28 @@ class ApiClient {
     return this.request<Car[]>("/cars");
   }
 
-  async getCarById(id: number): Promise<Car> {
+  async getCarById(id: string): Promise<Car> {
     return this.request<Car>(`/cars/${id}`);
   }
 
-  async getCarsByBrand(brand: string): Promise<Car[]> {
-    return this.request<Car[]>(
-      `/cars/brand?brand=${encodeURIComponent(brand)}`
-    );
-  }
-
   async createCar(
-    car: Omit<Car, "id" | "created_at" | "updated_at">
+    carData: Omit<Car, "id" | "created_at" | "updated_at">
   ): Promise<Car> {
     return this.request<Car>("/cars", {
       method: "POST",
-      body: JSON.stringify(car),
+      body: JSON.stringify(carData),
     });
   }
 
-  async updateCar(id: number, car: Partial<Car>): Promise<Car> {
+  async updateCar(id: string, carData: Partial<Car>): Promise<Car> {
     return this.request<Car>(`/cars/${id}`, {
       method: "PUT",
-      body: JSON.stringify(car),
+      body: JSON.stringify(carData),
     });
   }
 
-  async deleteCar(id: number): Promise<void> {
-    return this.request<void>(`/cars/${id}`, {
+  async deleteCar(id: string): Promise<void> {
+    await this.request(`/cars/${id}`, {
       method: "DELETE",
     });
   }
@@ -145,42 +199,61 @@ class ApiClient {
     return this.request<Booking[]>("/bookings");
   }
 
-  async getBookingById(id: number): Promise<Booking> {
+  async getBookingById(id: string): Promise<Booking> {
     return this.request<Booking>(`/bookings/${id}`);
   }
 
-  async createBooking(
-    booking: Omit<Booking, "id" | "created_at" | "updated_at">
-  ): Promise<Booking> {
+  async getBookingsByCustomer(customerId: string): Promise<Booking[]> {
+    return this.request<Booking[]>(`/bookings/customer/${customerId}`);
+  }
+
+  async getBookingsByCar(carId: string): Promise<Booking[]> {
+    return this.request<Booking[]>(`/bookings/car/${carId}`);
+  }
+
+  async getBookingsByOwner(ownerId: string): Promise<Booking[]> {
+    return this.request<Booking[]>(`/bookings/owner/${ownerId}`);
+  }
+
+  async createBooking(bookingData: {
+    customer_id: string;
+    car_id: string;
+    owner_id: string;
+    booking_type: "rental" | "purchase";
+    start_date?: string;
+    end_date?: string;
+    notes?: string;
+  }): Promise<Booking> {
     return this.request<Booking>("/bookings", {
       method: "POST",
-      body: JSON.stringify(booking),
+      body: JSON.stringify(bookingData),
     });
   }
 
-  async updateBookingStatus(id: number, status: string): Promise<Booking> {
+  async updateBookingStatus(id: string, status: string): Promise<Booking> {
     return this.request<Booking>(`/bookings/${id}/status`, {
       method: "PUT",
       body: JSON.stringify({ status }),
     });
   }
 
-  async deleteBooking(id: number): Promise<void> {
-    return this.request<void>(`/bookings/${id}`, {
+  async deleteBooking(id: string): Promise<void> {
+    await this.request(`/bookings/${id}`, {
       method: "DELETE",
     });
   }
 
-  async getBookingsByCustomer(customerId: number): Promise<Booking[]> {
-    return this.request<Booking[]>(`/bookings/customer/${customerId}`);
+  // Helper method to set token manually
+  setToken(token: string): void {
+    this.token = token;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("auth_token", token);
+    }
   }
 
-  async getBookingsByCar(carId: number): Promise<Booking[]> {
-    return this.request<Booking[]>(`/bookings/car/${carId}`);
-  }
-
-  async getBookingsByOwner(ownerId: number): Promise<Booking[]> {
-    return this.request<Booking[]>(`/bookings/owner/${ownerId}`);
+  // Helper method to get current token
+  getToken(): string | null {
+    return this.token;
   }
 }
 
