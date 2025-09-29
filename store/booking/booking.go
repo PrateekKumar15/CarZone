@@ -141,7 +141,7 @@ func (s BookingStore) GetBookingsByOwnerID(ctx context.Context, ownerID string) 
 	return bookings, nil
 }
 
-func (s BookingStore) CreateBooking(ctx context.Context, bookingReq models.BookingRequest) (models.Booking, error) {
+func (s BookingStore) CreateBooking(ctx context.Context, bookingReq models.BookingRequest, totalAmount float64) (models.Booking, error) {
 	tracer := otel.Tracer("BookingStore")
 	ctx, span := tracer.Start(ctx, "CreateBooking-Store")
 	defer span.End()
@@ -173,7 +173,7 @@ func (s BookingStore) CreateBooking(ctx context.Context, bookingReq models.Booki
 	         start_date, end_date, notes, created_at, updated_at`
 
 	err = tx.QueryRowContext(ctx, query, bookingId, bookingReq.CustomerID, bookingReq.CarID,
-		bookingReq.OwnerID, bookingReq.BookingType, models.BookingStatusPending, 0.0, // Default status and amount
+		bookingReq.OwnerID, bookingReq.BookingType, models.BookingStatusPending, totalAmount,
 		bookingReq.StartDate, bookingReq.EndDate, bookingReq.Notes, createdAt, updatedAt).Scan(
 		&createdBooking.ID, &createdBooking.CustomerID, &createdBooking.CarID, &createdBooking.OwnerID,
 		&createdBooking.BookingType, &createdBooking.Status, &createdBooking.TotalAmount,

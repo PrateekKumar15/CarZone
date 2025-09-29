@@ -130,12 +130,48 @@ func (s *BookingService) CreateBooking(ctx context.Context, bookingReq models.Bo
 		}
 	}
 
-	booking, err := s.bookingStore.CreateBooking(ctx, bookingReq)
+	// Calculate total amount based on booking type and duration
+	totalAmount, err := s.calculateTotalAmount(car, bookingReq)
+	if err != nil {
+		return nil, err
+	}
+
+	booking, err := s.bookingStore.CreateBooking(ctx, bookingReq, totalAmount)
 	if err != nil {
 		return nil, err
 	}
 
 	return &booking, nil
+}
+
+func (s *BookingService) calculateTotalAmount(car models.Car, bookingReq models.BookingRequest) (float64, error) {
+	if bookingReq.BookingType == models.BookingTypePurchase {
+		// For purchases, use the sale price
+		if car.Price.SalePrice == nil {
+			return 0, errors.New("sale price not available for this car")
+		}
+		return *car.Price.SalePrice, nil
+	}
+
+	// For rentals, calculate based on daily rate and duration
+	if bookingReq.StartDate == nil || bookingReq.EndDate == nil {
+		return 0, errors.New("start and end dates are required for rental bookings")
+	}
+
+	dailyRate := car.Price.RentalPriceDaily
+	if dailyRate <= 0 {
+		return 0, errors.New("invalid daily rental price for this car")
+	}
+
+	// Calculate duration in days
+	duration := bookingReq.EndDate.Sub(*bookingReq.StartDate)
+	days := int(duration.Hours() / 24)
+	if days < 1 {
+		days = 1 // Minimum 1 day
+	}
+
+	totalAmount := dailyRate * float64(days)
+	return totalAmount, nil
 }
 
 func (s *BookingService) UpdateBookingStatus(ctx context.Context, id string, status models.BookingStatus) (*models.Booking, error) {

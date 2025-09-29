@@ -202,7 +202,7 @@ type BookingStoreInterface interface {
 	// Returns:
 	//   - models.Booking: The created booking record with generated ID and timestamps
 	//   - error: Error if creation fails or validation errors occur
-	CreateBooking(ctx context.Context, bookingReq models.BookingRequest) (models.Booking, error)
+	CreateBooking(ctx context.Context, bookingReq models.BookingRequest, totalAmount float64) (models.Booking, error)
 
 	// UpdateBookingStatus updates the status of an existing booking.
 	// Parameters:

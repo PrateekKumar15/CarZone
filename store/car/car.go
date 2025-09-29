@@ -74,7 +74,7 @@ func (s CarStore) GetCarWithOwnerByID(ctx context.Context, id string) (models.Ca
 	var engineJSON, priceJSON, featuresJSON, ownerProfileDataJSON []byte
 	var images pq.StringArray
 
-	// Join query to get car data with owner information
+	// Join query to get car data with owner information (INNER JOIN since owner is mandatory)
 	query := `SELECT 
 		c.id, c.owner_id, c.name, c.model, c.year, c.brand, c.fuel_type, c.engine, 
 		c.location_city, c.location_state, c.location_country, c.price, c.status, 
@@ -82,7 +82,7 @@ func (s CarStore) GetCarWithOwnerByID(ctx context.Context, id string) (models.Ca
 		c.mileage, c.created_at, c.updated_at,
 		u.id, u.username, u.email, u.phone, u.role, u.profile_data, u.created_at, u.updated_at
 		FROM car c 
-		LEFT JOIN users u ON c.owner_id = u.id 
+		INNER JOIN users u ON c.owner_id = u.id 
 		WHERE c.id = $1`
 
 	row := s.db.QueryRowContext(ctx, query, id)
@@ -113,18 +113,16 @@ func (s CarStore) GetCarWithOwnerByID(ctx context.Context, id string) (models.Ca
 	}
 	car.Images = []string(images)
 
-	// Parse owner profile data if owner exists
-	if owner.ID.String() != "00000000-0000-0000-0000-000000000000" {
-		if len(ownerProfileDataJSON) > 0 {
-			err = json.Unmarshal(ownerProfileDataJSON, &owner.ProfileData)
-			if err != nil {
-				return models.Car{}, err
-			}
-		} else {
-			owner.ProfileData = make(map[string]interface{})
+	// Parse owner profile data (owner is mandatory)
+	if len(ownerProfileDataJSON) > 0 {
+		err = json.Unmarshal(ownerProfileDataJSON, &owner.ProfileData)
+		if err != nil {
+			return models.Car{}, err
 		}
-		car.Owner = &owner
+	} else {
+		owner.ProfileData = make(map[string]interface{})
 	}
+	car.Owner = &owner
 
 	return car, nil
 }
