@@ -26,7 +26,8 @@ func (s *CarService) GetCarByID(ctx context.Context, id string) (*models.Car, er
 		return nil, errors.New("car ID cannot be empty")
 	}
 
-	car, err := s.store.GetCarByID(ctx, id)
+	// Use the method that includes owner information
+	car, err := s.store.GetCarWithOwnerByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}

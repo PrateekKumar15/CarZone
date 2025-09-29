@@ -24,6 +24,11 @@ func NewCarHandler(service service.CarServiceInterface) *CarHandler {
 
 // GetCarByID retrieves a car by its ID
 func (h *CarHandler) GetCarByID(w http.ResponseWriter, r *http.Request) {
+	// Handle OPTIONS request for CORS preflight
+	if r.Method == http.MethodOptions {
+		return // CORS middleware will handle the response
+	}
+
 	ctx := r.Context()
 	tracer := otel.Tracer("CarHandler")
 	ctx, span := tracer.Start(ctx, "GetCarByID-Handler")
@@ -196,6 +201,11 @@ func (h *CarHandler) DeleteCar(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CarHandler) GetAllCars(w http.ResponseWriter, r *http.Request) {
+	// Handle OPTIONS request for CORS preflight
+	if r.Method == http.MethodOptions {
+		return // CORS middleware will handle the response
+	}
+
 	ctx := r.Context()
 	tracer := otel.Tracer("CarHandler")
 	ctx, span := tracer.Start(ctx, "GetAllCars-Handler")

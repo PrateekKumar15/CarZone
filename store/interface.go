@@ -24,6 +24,15 @@ type CarStoreInterface interface {
 	//   - error: Error if car not found or database operation fails
 	GetCarByID(ctx context.Context, id string) (models.Car, error)
 
+	// GetCarWithOwnerByID retrieves a single car record with owner information by its unique identifier.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - id: Unique identifier of the car (UUID string format)
+	// Returns:
+	//   - models.Car: The car record with populated owner field if found
+	//   - error: Error if car not found or database operation fails
+	GetCarWithOwnerByID(ctx context.Context, id string) (models.Car, error)
+
 	// GetCarByBrand retrieves multiple car records filtered by brand name.
 	// Parameters:
 	//   - ctx: Request context for cancellation and timeout

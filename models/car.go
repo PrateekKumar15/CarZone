@@ -27,13 +27,14 @@ type Price struct {
 // It contains all necessary information for rental management including
 // ownership, pricing, availability, and specifications
 type Car struct {
-	ID       uuid.UUID  `json:"id"`        // Unique identifier for the car
-	OwnerID  *uuid.UUID `json:"owner_id"`  // ID of the user who owns this car
-	Name     string     `json:"name"`      // Display name/model of the car
-	Brand    string     `json:"brand"`     // Manufacturer brand name
-	Model    string     `json:"model"`     // Specific model name
-	Year     int        `json:"year"`      // Manufacturing year
-	FuelType string     `json:"fuel_type"` // Type of fuel (Petrol, Diesel, Electric, Hybrid)
+	ID       uuid.UUID  `json:"id"`              // Unique identifier for the car
+	OwnerID  *uuid.UUID `json:"owner_id"`        // ID of the user who owns this car
+	Owner    *User      `json:"owner,omitempty"` // Owner user information (populated when needed)
+	Name     string     `json:"name"`            // Display name/model of the car
+	Brand    string     `json:"brand"`           // Manufacturer brand name
+	Model    string     `json:"model"`           // Specific model name
+	Year     int        `json:"year"`            // Manufacturing year
+	FuelType string     `json:"fuel_type"`       // Type of fuel (Petrol, Diesel, Electric, Hybrid)
 
 	// Engine specifications (embedded struct)
 	Engine Engine `json:"engine"` // Engine specifications

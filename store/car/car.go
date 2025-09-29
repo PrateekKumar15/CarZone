@@ -63,6 +63,72 @@ func (s CarStore) GetCarByID(ctx context.Context, id string) (models.Car, error)
 	return car, nil
 }
 
+// GetCarWithOwnerByID retrieves a car by ID and includes owner information
+func (s CarStore) GetCarWithOwnerByID(ctx context.Context, id string) (models.Car, error) {
+	tracer := otel.Tracer("CarStore")
+	ctx, span := tracer.Start(ctx, "GetCarWithOwnerByID-Store")
+	defer span.End()
+
+	var car models.Car
+	var owner models.User
+	var engineJSON, priceJSON, featuresJSON, ownerProfileDataJSON []byte
+	var images pq.StringArray
+
+	// Join query to get car data with owner information
+	query := `SELECT 
+		c.id, c.owner_id, c.name, c.model, c.year, c.brand, c.fuel_type, c.engine, 
+		c.location_city, c.location_state, c.location_country, c.price, c.status, 
+		c.availability_type, c.is_available, c.features, c.description, c.images, 
+		c.mileage, c.created_at, c.updated_at,
+		u.id, u.username, u.email, u.phone, u.role, u.profile_data, u.created_at, u.updated_at
+		FROM car c 
+		LEFT JOIN users u ON c.owner_id = u.id 
+		WHERE c.id = $1`
+
+	row := s.db.QueryRowContext(ctx, query, id)
+	err := row.Scan(
+		&car.ID, &car.OwnerID, &car.Name, &car.Model, &car.Year, &car.Brand,
+		&car.FuelType, &engineJSON, &car.LocationCity, &car.LocationState, &car.LocationCountry,
+		&priceJSON, &car.Status, &car.AvailabilityType, &car.IsAvailable, &featuresJSON,
+		&car.Description, &images, &car.Mileage, &car.CreatedAt, &car.UpdatedAt,
+		&owner.ID, &owner.UserName, &owner.Email, &owner.Phone, &owner.Role,
+		&ownerProfileDataJSON, &owner.CreatedAt, &owner.UpdatedAt)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return models.Car{}, nil // No car found with the given ID
+		}
+		return models.Car{}, err
+	}
+
+	// Parse JSON fields for car
+	if err = json.Unmarshal(engineJSON, &car.Engine); err != nil {
+		return models.Car{}, err
+	}
+	if err = json.Unmarshal(priceJSON, &car.Price); err != nil {
+		return models.Car{}, err
+	}
+	if err = json.Unmarshal(featuresJSON, &car.Features); err != nil {
+		return models.Car{}, err
+	}
+	car.Images = []string(images)
+
+	// Parse owner profile data if owner exists
+	if owner.ID.String() != "00000000-0000-0000-0000-000000000000" {
+		if len(ownerProfileDataJSON) > 0 {
+			err = json.Unmarshal(ownerProfileDataJSON, &owner.ProfileData)
+			if err != nil {
+				return models.Car{}, err
+			}
+		} else {
+			owner.ProfileData = make(map[string]interface{})
+		}
+		car.Owner = &owner
+	}
+
+	return car, nil
+}
+
 func (s CarStore) GetCarByBrand(ctx context.Context, brand string) ([]models.Car, error) {
 	tracer := otel.Tracer("CarStore")
 	ctx, span := tracer.Start(ctx, "GetCarByBrand-Store")
