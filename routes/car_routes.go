@@ -21,7 +21,7 @@ func (r *Router) setupCarRoutes(router *mux.Router) {
 
 	// GET /cars/brand - Retrieve cars by brand with optional engine details
 	// Query parameters: ?brand={brand}&engine={true/false}
-	router.HandleFunc("/cars/brand", r.CarHandler.GetCarByBrand).Methods("GET")
+	router.HandleFunc("/carsbybrand", r.CarHandler.GetCarByBrand).Methods("GET")
 
 	// POST /cars - Create a new car record
 	// Body: Car JSON data, supports multipart/form-data for image uploads

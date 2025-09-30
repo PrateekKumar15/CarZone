@@ -123,14 +123,12 @@ func (s *BookingService) CreateBooking(ctx context.Context, bookingReq models.Bo
 		return nil, errors.New("owner ID does not match car owner")
 	}
 
-	// Check for booking conflicts if it's a rental
-	if bookingReq.BookingType == models.BookingTypeRental {
-		if err := s.checkBookingConflicts(ctx, bookingReq); err != nil {
-			return nil, err
-		}
+	// Check for booking conflicts (all bookings are rentals now)
+	if err := s.checkBookingConflicts(ctx, bookingReq); err != nil {
+		return nil, err
 	}
 
-	// Calculate total amount based on booking type and duration
+	// Calculate total amount based on duration
 	totalAmount, err := s.calculateTotalAmount(car, bookingReq)
 	if err != nil {
 		return nil, err
@@ -145,26 +143,14 @@ func (s *BookingService) CreateBooking(ctx context.Context, bookingReq models.Bo
 }
 
 func (s *BookingService) calculateTotalAmount(car models.Car, bookingReq models.BookingRequest) (float64, error) {
-	if bookingReq.BookingType == models.BookingTypePurchase {
-		// For purchases, use the sale price
-		if car.Price.SalePrice == nil {
-			return 0, errors.New("sale price not available for this car")
-		}
-		return *car.Price.SalePrice, nil
-	}
-
 	// For rentals, calculate based on daily rate and duration
-	if bookingReq.StartDate == nil || bookingReq.EndDate == nil {
-		return 0, errors.New("start and end dates are required for rental bookings")
-	}
-
-	dailyRate := car.Price.RentalPriceDaily
+	dailyRate := car.Price
 	if dailyRate <= 0 {
 		return 0, errors.New("invalid daily rental price for this car")
 	}
 
 	// Calculate duration in days
-	duration := bookingReq.EndDate.Sub(*bookingReq.StartDate)
+	duration := bookingReq.EndDate.Sub(bookingReq.StartDate)
 	days := int(duration.Hours() / 24)
 	if days < 1 {
 		days = 1 // Minimum 1 day
@@ -262,34 +248,14 @@ func (s *BookingService) validateBookingRequest(req models.BookingRequest) error
 		return errors.New("owner ID is required")
 	}
 
-	if req.BookingType == "" {
-		return errors.New("booking type is required")
-	}
-
-	if req.BookingType != models.BookingTypeRental && req.BookingType != models.BookingTypePurchase {
-		return errors.New("booking type must be 'rental' or 'purchase'")
-	}
-
-	// Validate rental-specific fields
-	if req.BookingType == models.BookingTypeRental {
-		return s.validateRentalRequest(req)
-	}
-
-	return nil
+	// Validate rental fields (all bookings are rentals now)
+	return s.validateRentalRequest(req)
 }
 
 // validateRentalRequest validates rental-specific fields
 func (s *BookingService) validateRentalRequest(req models.BookingRequest) error {
-	if req.StartDate == nil {
-		return errors.New("start date is required for rental bookings")
-	}
-
-	if req.EndDate == nil {
-		return errors.New("end date is required for rental bookings")
-	}
-
 	// Validate date logic
-	if req.StartDate.After(*req.EndDate) {
+	if req.StartDate.After(req.EndDate) {
 		return errors.New("start date cannot be after end date")
 	}
 
@@ -298,7 +264,7 @@ func (s *BookingService) validateRentalRequest(req models.BookingRequest) error 
 	}
 
 	// Validate minimum rental duration (at least 1 day)
-	duration := req.EndDate.Sub(*req.StartDate)
+	duration := req.EndDate.Sub(req.StartDate)
 	if duration < 24*time.Hour {
 		return errors.New("minimum rental duration is 1 day")
 	}
@@ -364,12 +330,9 @@ func (s *BookingService) checkBookingConflicts(ctx context.Context, req models.B
 
 	// Check for date conflicts with confirmed/active rentals
 	for _, booking := range existingBookings {
-		if booking.BookingType == models.BookingTypeRental &&
-			(booking.Status == models.BookingStatusConfirmed || booking.Status == models.BookingStatusPending) &&
-			booking.StartDate != nil && booking.EndDate != nil {
-
+		if booking.Status == models.BookingStatusConfirmed || booking.Status == models.BookingStatusPending {
 			// Check if dates overlap
-			if s.datesOverlap(*req.StartDate, *req.EndDate, *booking.StartDate, *booking.EndDate) {
+			if s.datesOverlap(req.StartDate, req.EndDate, booking.StartDate, booking.EndDate) {
 				return errors.New("booking conflicts with existing rental for the same period")
 			}
 		}

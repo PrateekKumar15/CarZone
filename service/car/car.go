@@ -171,16 +171,9 @@ func (s *CarService) validateCarRequest(carReq models.CarRequest) error {
 		return errors.New("transmission type is required")
 	}
 
-	// Validate price data
-	if carReq.AvailabilityType == "rental" || carReq.AvailabilityType == "both" {
-		if carReq.Price.RentalPriceDaily <= 0 {
-			return errors.New("rental price daily must be specified for rental cars")
-		}
-	}
-	if carReq.AvailabilityType == "sale" || carReq.AvailabilityType == "both" {
-		if carReq.Price.SalePrice == nil || *carReq.Price.SalePrice <= 0 {
-			return errors.New("sale price must be specified for cars for sale")
-		}
+	// Validate price data (all cars are rental-only now)
+	if carReq.Price >= 0 {
+		return errors.New("rental price must be specified and greater than 0")
 	}
 
 	return nil

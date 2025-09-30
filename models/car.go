@@ -17,11 +17,8 @@ type Engine struct {
 	Transmission string  `json:"transmission"` // Manual, Automatic, CVT, Semi-Automatic
 }
 
-// Price represents the pricing information for a car
-type Price struct {
-	RentalPriceDaily float64  `json:"rental_price_daily"` // Daily rental price
-	SalePrice        *float64 `json:"sale_price"`         // Sale price (nullable for rental-only cars)
-}
+// Price represents the pricing information for a car rental
+
 
 // Car represents a vehicle entity in the CarZone rental and sales system
 // It contains all necessary information for rental management including
@@ -45,11 +42,10 @@ type Car struct {
 	LocationCountry string `json:"location_country"` // Country where car is located
 
 	// Pricing (embedded struct)
-	Price Price `json:"price"` // Pricing information
+	Price float64 `json:"rental_price"` // Pricing information
 
 	// Status and availability
 	Status           string `json:"status"`            // active, maintenance, inactive
-	AvailabilityType string `json:"availability_type"` // rental, sale, both
 	IsAvailable      bool   `json:"is_available"`      // Current availability status
 
 	// Additional information
@@ -82,7 +78,7 @@ type CarRequest struct {
 	LocationCountry string `json:"location_country"` // Country
 
 	// Pricing (embedded struct)
-	Price Price `json:"price"` // Pricing information
+	Price float64 `json:"rental_price"` // Pricing information
 
 	// Status and availability
 	Status           string `json:"status"`            // active, maintenance, inactive
@@ -241,20 +237,9 @@ func validateLocation(city, state, country string) error {
 }
 
 // validatePrice validates the price struct and all its fields
-func validatePrice(price Price) error {
-	if err := validatePricing(price.RentalPriceDaily, price.SalePrice); err != nil {
-		return err
-	}
-	return nil
-}
-
-// validatePricing validates rental and sale pricing
-func validatePricing(rentalPrice float64, salePrice *float64) error {
-	if rentalPrice <= 0 {
-		return errors.New("rental price must be a positive number")
-	}
-	if salePrice != nil && *salePrice <= 0 {
-		return errors.New("sale price must be a positive number when provided")
+func validatePrice(price float64) error {
+	if price <= 0 {
+		return errors.New("rental price must be greater than 0")
 	}
 	return nil
 }
@@ -270,15 +255,12 @@ func validateStatus(status string) error {
 	return errors.New("status must be one of: active, maintenance, inactive")
 }
 
-// validateAvailabilityType ensures the availability type is valid
+// validateAvailabilityType ensures the availability type is valid for rental-only platform
 func validateAvailabilityType(availabilityType string) error {
-	validTypes := []string{"rental", "sale", "both"}
-	for _, validType := range validTypes {
-		if availabilityType == validType {
-			return nil
-		}
+	if availabilityType != "rental" {
+		return errors.New("availability type must be 'rental' for rental-only platform")
 	}
-	return errors.New("availability type must be one of: rental, sale, both")
+	return nil
 }
 
 // validateMileage validates car mileage

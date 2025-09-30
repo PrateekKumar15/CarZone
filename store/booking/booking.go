@@ -26,13 +26,13 @@ func (s BookingStore) GetBookingByID(ctx context.Context, id string) (models.Boo
 
 	var booking models.Booking
 
-	query := `SELECT id, customer_id, car_id, owner_id, booking_type, status, total_amount, 
+	query := `SELECT id, customer_id, car_id, owner_id, status, total_amount, 
 	         start_date, end_date, notes, created_at, updated_at 
 	         FROM booking WHERE id = $1`
 
 	row := s.db.QueryRowContext(ctx, query, id)
 	err := row.Scan(&booking.ID, &booking.CustomerID, &booking.CarID, &booking.OwnerID,
-		&booking.BookingType, &booking.Status, &booking.TotalAmount, &booking.StartDate,
+		&booking.Status, &booking.TotalAmount, &booking.StartDate,
 		&booking.EndDate, &booking.Notes, &booking.CreatedAt, &booking.UpdatedAt)
 
 	if err != nil {
@@ -52,7 +52,7 @@ func (s BookingStore) GetBookingsByCustomerID(ctx context.Context, customerID st
 
 	var bookings []models.Booking
 
-	query := `SELECT id, customer_id, car_id, owner_id, booking_type, status, total_amount, 
+	query := `SELECT id, customer_id, car_id, owner_id, status, total_amount, 
 	         start_date, end_date, notes, created_at, updated_at 
 	         FROM booking WHERE customer_id = $1 ORDER BY created_at DESC`
 
@@ -65,7 +65,7 @@ func (s BookingStore) GetBookingsByCustomerID(ctx context.Context, customerID st
 	for rows.Next() {
 		var booking models.Booking
 		err = rows.Scan(&booking.ID, &booking.CustomerID, &booking.CarID, &booking.OwnerID,
-			&booking.BookingType, &booking.Status, &booking.TotalAmount, &booking.StartDate,
+			&booking.Status, &booking.TotalAmount, &booking.StartDate,
 			&booking.EndDate, &booking.Notes, &booking.CreatedAt, &booking.UpdatedAt)
 
 		if err != nil {
@@ -84,7 +84,7 @@ func (s BookingStore) GetBookingsByCarID(ctx context.Context, carID string) ([]m
 
 	var bookings []models.Booking
 
-	query := `SELECT id, customer_id, car_id, owner_id, booking_type, status, total_amount, 
+	query := `SELECT id, customer_id, car_id, owner_id, status, total_amount, 
 	         start_date, end_date, notes, created_at, updated_at 
 	         FROM booking WHERE car_id = $1 ORDER BY created_at DESC`
 
@@ -97,7 +97,7 @@ func (s BookingStore) GetBookingsByCarID(ctx context.Context, carID string) ([]m
 	for rows.Next() {
 		var booking models.Booking
 		err = rows.Scan(&booking.ID, &booking.CustomerID, &booking.CarID, &booking.OwnerID,
-			&booking.BookingType, &booking.Status, &booking.TotalAmount, &booking.StartDate,
+			&booking.Status, &booking.TotalAmount, &booking.StartDate,
 			&booking.EndDate, &booking.Notes, &booking.CreatedAt, &booking.UpdatedAt)
 
 		if err != nil {
@@ -116,7 +116,7 @@ func (s BookingStore) GetBookingsByOwnerID(ctx context.Context, ownerID string) 
 
 	var bookings []models.Booking
 
-	query := `SELECT id, customer_id, car_id, owner_id, booking_type, status, total_amount, 
+	query := `SELECT id, customer_id, car_id, owner_id, status, total_amount, 
 	         start_date, end_date, notes, created_at, updated_at 
 	         FROM booking WHERE owner_id = $1 ORDER BY created_at DESC`
 
@@ -129,7 +129,7 @@ func (s BookingStore) GetBookingsByOwnerID(ctx context.Context, ownerID string) 
 	for rows.Next() {
 		var booking models.Booking
 		err = rows.Scan(&booking.ID, &booking.CustomerID, &booking.CarID, &booking.OwnerID,
-			&booking.BookingType, &booking.Status, &booking.TotalAmount, &booking.StartDate,
+			&booking.Status, &booking.TotalAmount, &booking.StartDate,
 			&booking.EndDate, &booking.Notes, &booking.CreatedAt, &booking.UpdatedAt)
 
 		if err != nil {
@@ -166,17 +166,17 @@ func (s BookingStore) CreateBooking(ctx context.Context, bookingReq models.Booki
 	createdAt := time.Now()
 	updatedAt := createdAt
 
-	query := `INSERT INTO booking (id, customer_id, car_id, owner_id, booking_type, status, total_amount, 
+	query := `INSERT INTO booking (id, customer_id, car_id, owner_id, status, total_amount, 
 	         start_date, end_date, notes, created_at, updated_at)
-	         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-	         RETURNING id, customer_id, car_id, owner_id, booking_type, status, total_amount, 
+	         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	         RETURNING id, customer_id, car_id, owner_id, status, total_amount, 
 	         start_date, end_date, notes, created_at, updated_at`
 
 	err = tx.QueryRowContext(ctx, query, bookingId, bookingReq.CustomerID, bookingReq.CarID,
-		bookingReq.OwnerID, bookingReq.BookingType, models.BookingStatusPending, totalAmount,
+		bookingReq.OwnerID, models.BookingStatusPending, totalAmount,
 		bookingReq.StartDate, bookingReq.EndDate, bookingReq.Notes, createdAt, updatedAt).Scan(
 		&createdBooking.ID, &createdBooking.CustomerID, &createdBooking.CarID, &createdBooking.OwnerID,
-		&createdBooking.BookingType, &createdBooking.Status, &createdBooking.TotalAmount,
+		&createdBooking.Status, &createdBooking.TotalAmount,
 		&createdBooking.StartDate, &createdBooking.EndDate, &createdBooking.Notes,
 		&createdBooking.CreatedAt, &createdBooking.UpdatedAt)
 
@@ -208,12 +208,12 @@ func (s BookingStore) UpdateBookingStatus(ctx context.Context, id string, status
 	}()
 
 	query := `UPDATE booking SET status = $1, updated_at = $2 WHERE id = $3 
-	         RETURNING id, customer_id, car_id, owner_id, booking_type, status, total_amount, 
+	         RETURNING id, customer_id, car_id, owner_id, status, total_amount, 
 	         start_date, end_date, notes, created_at, updated_at`
 
 	err = tx.QueryRowContext(ctx, query, status, time.Now(), id).Scan(
 		&updatedBooking.ID, &updatedBooking.CustomerID, &updatedBooking.CarID, &updatedBooking.OwnerID,
-		&updatedBooking.BookingType, &updatedBooking.Status, &updatedBooking.TotalAmount,
+		&updatedBooking.Status, &updatedBooking.TotalAmount,
 		&updatedBooking.StartDate, &updatedBooking.EndDate, &updatedBooking.Notes,
 		&updatedBooking.CreatedAt, &updatedBooking.UpdatedAt)
 
@@ -248,12 +248,12 @@ func (s BookingStore) DeleteBooking(ctx context.Context, id string) (models.Book
 	}()
 
 	// First get the booking data before deleting
-	query := `SELECT id, customer_id, car_id, owner_id, booking_type, status, total_amount, 
+	query := `SELECT id, customer_id, car_id, owner_id, status, total_amount, 
 	         start_date, end_date, notes, created_at, updated_at 
 	         FROM booking WHERE id = $1`
 
 	err = tx.QueryRowContext(ctx, query, id).Scan(&deletedBooking.ID, &deletedBooking.CustomerID,
-		&deletedBooking.CarID, &deletedBooking.OwnerID, &deletedBooking.BookingType, &deletedBooking.Status,
+		&deletedBooking.CarID, &deletedBooking.OwnerID, &deletedBooking.Status,
 		&deletedBooking.TotalAmount, &deletedBooking.StartDate, &deletedBooking.EndDate,
 		&deletedBooking.Notes, &deletedBooking.CreatedAt, &deletedBooking.UpdatedAt)
 
@@ -287,7 +287,7 @@ func (s BookingStore) GetAllBookings(ctx context.Context) ([]models.Booking, err
 
 	var bookings []models.Booking
 
-	query := `SELECT id, customer_id, car_id, owner_id, booking_type, status, total_amount, 
+	query := `SELECT id, customer_id, car_id, owner_id, status, total_amount, 
 	         start_date, end_date, notes, created_at, updated_at 
 	         FROM booking ORDER BY created_at DESC`
 
@@ -300,7 +300,7 @@ func (s BookingStore) GetAllBookings(ctx context.Context) ([]models.Booking, err
 	for rows.Next() {
 		var booking models.Booking
 		err = rows.Scan(&booking.ID, &booking.CustomerID, &booking.CarID, &booking.OwnerID,
-			&booking.BookingType, &booking.Status, &booking.TotalAmount, &booking.StartDate,
+			&booking.Status, &booking.TotalAmount, &booking.StartDate,
 			&booking.EndDate, &booking.Notes, &booking.CreatedAt, &booking.UpdatedAt)
 
 		if err != nil {

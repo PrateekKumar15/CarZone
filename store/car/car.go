@@ -27,18 +27,18 @@ func (s CarStore) GetCarByID(ctx context.Context, id string) (models.Car, error)
 	defer span.End()
 
 	var car models.Car
-	var engineJSON, priceJSON, featuresJSON []byte
+	var engineJSON, featuresJSON []byte
 	var images pq.StringArray
 
 	query := `SELECT id, owner_id, name, model, year, brand, fuel_type, engine, location_city, 
-	         location_state, location_country, price, status, availability_type, is_available, 
+	         location_state, location_country, price, status, is_available, 
 	         features, description, images, mileage, created_at, updated_at 
 	         FROM car WHERE id = $1`
 
 	row := s.db.QueryRowContext(ctx, query, id)
 	err := row.Scan(&car.ID, &car.OwnerID, &car.Name, &car.Model, &car.Year, &car.Brand,
 		&car.FuelType, &engineJSON, &car.LocationCity, &car.LocationState, &car.LocationCountry,
-		&priceJSON, &car.Status, &car.AvailabilityType, &car.IsAvailable, &featuresJSON,
+		&car.Price, &car.Status, &car.IsAvailable, &featuresJSON,
 		&car.Description, &images, &car.Mileage, &car.CreatedAt, &car.UpdatedAt)
 
 	if err != nil {
@@ -52,9 +52,7 @@ func (s CarStore) GetCarByID(ctx context.Context, id string) (models.Car, error)
 	if err = json.Unmarshal(engineJSON, &car.Engine); err != nil {
 		return models.Car{}, err
 	}
-	if err = json.Unmarshal(priceJSON, &car.Price); err != nil {
-		return models.Car{}, err
-	}
+
 	if err = json.Unmarshal(featuresJSON, &car.Features); err != nil {
 		return models.Car{}, err
 	}
@@ -71,14 +69,13 @@ func (s CarStore) GetCarWithOwnerByID(ctx context.Context, id string) (models.Ca
 
 	var car models.Car
 	var owner models.User
-	var engineJSON, priceJSON, featuresJSON, ownerProfileDataJSON []byte
+	var engineJSON, featuresJSON, ownerProfileDataJSON []byte
 	var images pq.StringArray
 
 	// Join query to get car data with owner information (INNER JOIN since owner is mandatory)
 	query := `SELECT 
 		c.id, c.owner_id, c.name, c.model, c.year, c.brand, c.fuel_type, c.engine, 
-		c.location_city, c.location_state, c.location_country, c.price, c.status, 
-		c.availability_type, c.is_available, c.features, c.description, c.images, 
+		c.location_city, c.location_state, c.location_country, c.price, c.status, c.is_available, c.features, c.description, c.images, 
 		c.mileage, c.created_at, c.updated_at,
 		u.id, u.username, u.email, u.phone, u.role, u.profile_data, u.created_at, u.updated_at
 		FROM car c 
@@ -89,7 +86,7 @@ func (s CarStore) GetCarWithOwnerByID(ctx context.Context, id string) (models.Ca
 	err := row.Scan(
 		&car.ID, &car.OwnerID, &car.Name, &car.Model, &car.Year, &car.Brand,
 		&car.FuelType, &engineJSON, &car.LocationCity, &car.LocationState, &car.LocationCountry,
-		&priceJSON, &car.Status, &car.AvailabilityType, &car.IsAvailable, &featuresJSON,
+		&car.Price, &car.Status, &car.IsAvailable, &featuresJSON,
 		&car.Description, &images, &car.Mileage, &car.CreatedAt, &car.UpdatedAt,
 		&owner.ID, &owner.UserName, &owner.Email, &owner.Phone, &owner.Role,
 		&ownerProfileDataJSON, &owner.CreatedAt, &owner.UpdatedAt)
@@ -103,9 +100,6 @@ func (s CarStore) GetCarWithOwnerByID(ctx context.Context, id string) (models.Ca
 
 	// Parse JSON fields for car
 	if err = json.Unmarshal(engineJSON, &car.Engine); err != nil {
-		return models.Car{}, err
-	}
-	if err = json.Unmarshal(priceJSON, &car.Price); err != nil {
 		return models.Car{}, err
 	}
 	if err = json.Unmarshal(featuresJSON, &car.Features); err != nil {
@@ -134,7 +128,7 @@ func (s CarStore) GetCarByBrand(ctx context.Context, brand string) ([]models.Car
 
 	var cars []models.Car
 	query := `SELECT id, owner_id, name, model, year, brand, fuel_type, engine, location_city, 
-	         location_state, location_country, price, status, availability_type, is_available, 
+	         location_state, location_country, price, status, is_available, 
 	         features, description, images, mileage, created_at, updated_at 
 	         FROM car WHERE brand = $1`
 
@@ -146,12 +140,12 @@ func (s CarStore) GetCarByBrand(ctx context.Context, brand string) ([]models.Car
 
 	for rows.Next() {
 		var car models.Car
-		var engineJSON, priceJSON, featuresJSON []byte
+		var engineJSON, featuresJSON []byte
 		var images pq.StringArray
 
 		err = rows.Scan(&car.ID, &car.OwnerID, &car.Name, &car.Model, &car.Year, &car.Brand,
 			&car.FuelType, &engineJSON, &car.LocationCity, &car.LocationState, &car.LocationCountry,
-			&priceJSON, &car.Status, &car.AvailabilityType, &car.IsAvailable, &featuresJSON,
+			&car.Price, &car.Status, &car.IsAvailable, &featuresJSON,
 			&car.Description, &images, &car.Mileage, &car.CreatedAt, &car.UpdatedAt)
 
 		if err != nil {
@@ -162,9 +156,7 @@ func (s CarStore) GetCarByBrand(ctx context.Context, brand string) ([]models.Car
 		if err = json.Unmarshal(engineJSON, &car.Engine); err != nil {
 			return nil, err
 		}
-		if err = json.Unmarshal(priceJSON, &car.Price); err != nil {
-			return nil, err
-		}
+
 		if err = json.Unmarshal(featuresJSON, &car.Features); err != nil {
 			return nil, err
 		}
@@ -195,10 +187,6 @@ func (s CarStore) CreateCar(ctx context.Context, carReq models.CarRequest) (mode
 	if err != nil {
 		return models.Car{}, err
 	}
-	priceJSON, err := json.Marshal(carReq.Price)
-	if err != nil {
-		return models.Car{}, err
-	}
 	featuresJSON, err := json.Marshal(carReq.Features)
 	if err != nil {
 		return models.Car{}, err
@@ -219,11 +207,11 @@ func (s CarStore) CreateCar(ctx context.Context, carReq models.CarRequest) (mode
 	}()
 
 	query := `INSERT INTO car (id, owner_id, name, model, year, brand, fuel_type, engine, 
-	         location_city, location_state, location_country, price, status, availability_type, 
+	         location_city, location_state, location_country, price, status, 
 	         is_available, features, description, images, mileage, created_at, updated_at) 
 	         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
 	         RETURNING id, owner_id, name, model, year, brand, fuel_type, engine, location_city, 
-	         location_state, location_country, price, status, availability_type, is_available, 
+	         location_state, location_country, price, status, is_available, 
 	         features, description, images, mileage, created_at, updated_at`
 
 	var returnedEngineJSON, returnedPriceJSON, returnedFeaturesJSON []byte
@@ -231,12 +219,11 @@ func (s CarStore) CreateCar(ctx context.Context, carReq models.CarRequest) (mode
 
 	err = tx.QueryRowContext(ctx, query, carId, carReq.OwnerID, carReq.Name, carReq.Model, carReq.Year,
 		carReq.Brand, carReq.FuelType, engineJSON, carReq.LocationCity, carReq.LocationState,
-		carReq.LocationCountry, priceJSON, carReq.Status, carReq.AvailabilityType, carReq.IsAvailable,
+		carReq.LocationCountry, carReq.Price, carReq.Status, carReq.IsAvailable,
 		featuresJSON, carReq.Description, images, carReq.Mileage, createdAt, updatedAt).Scan(
 		&createdCar.ID, &createdCar.OwnerID, &createdCar.Name, &createdCar.Model, &createdCar.Year,
 		&createdCar.Brand, &createdCar.FuelType, &returnedEngineJSON, &createdCar.LocationCity,
-		&createdCar.LocationState, &createdCar.LocationCountry, &returnedPriceJSON, &createdCar.Status,
-		&createdCar.AvailabilityType, &createdCar.IsAvailable, &returnedFeaturesJSON,
+		&createdCar.LocationState, &createdCar.LocationCountry, &returnedPriceJSON, &createdCar.Status, &createdCar.IsAvailable, &returnedFeaturesJSON,
 		&createdCar.Description, &returnedImages, &createdCar.Mileage, &createdCar.CreatedAt, &createdCar.UpdatedAt)
 
 	if err != nil {
@@ -245,9 +232,6 @@ func (s CarStore) CreateCar(ctx context.Context, carReq models.CarRequest) (mode
 
 	// Parse returned JSON fields
 	if err = json.Unmarshal(returnedEngineJSON, &createdCar.Engine); err != nil {
-		return models.Car{}, err
-	}
-	if err = json.Unmarshal(returnedPriceJSON, &createdCar.Price); err != nil {
 		return models.Car{}, err
 	}
 	if err = json.Unmarshal(returnedFeaturesJSON, &createdCar.Features); err != nil {
@@ -270,10 +254,7 @@ func (s CarStore) UpdateCar(ctx context.Context, id string, carReq models.CarReq
 	if err != nil {
 		return models.Car{}, err
 	}
-	priceJSON, err := json.Marshal(carReq.Price)
-	if err != nil {
-		return models.Car{}, err
-	}
+
 	featuresJSON, err := json.Marshal(carReq.Features)
 	if err != nil {
 		return models.Car{}, err
@@ -295,7 +276,7 @@ func (s CarStore) UpdateCar(ctx context.Context, id string, carReq models.CarReq
 
 	query := `UPDATE car SET owner_id = $1, name = $2, model = $3, year = $4, brand = $5, fuel_type = $6, 
 	         engine = $7, location_city = $8, location_state = $9, location_country = $10, price = $11, 
-	         status = $12, availability_type = $13, is_available = $14, features = $15, description = $16, 
+	         status = $12, is_available = $14, features = $15, description = $16, 
 	         images = $17, mileage = $18, updated_at = $19 WHERE id = $20 
 	         RETURNING id, owner_id, name, model, year, brand, fuel_type, engine, location_city, 
 	         location_state, location_country, price, status, availability_type, is_available, 
@@ -306,12 +287,11 @@ func (s CarStore) UpdateCar(ctx context.Context, id string, carReq models.CarReq
 
 	err = tx.QueryRowContext(ctx, query, carReq.OwnerID, carReq.Name, carReq.Model, carReq.Year,
 		carReq.Brand, carReq.FuelType, engineJSON, carReq.LocationCity, carReq.LocationState,
-		carReq.LocationCountry, priceJSON, carReq.Status, carReq.AvailabilityType, carReq.IsAvailable,
+		carReq.LocationCountry,carReq.Price, carReq.Status, carReq.IsAvailable,
 		featuresJSON, carReq.Description, images, carReq.Mileage, time.Now(), id).Scan(
 		&updatedCar.ID, &updatedCar.OwnerID, &updatedCar.Name, &updatedCar.Model, &updatedCar.Year,
 		&updatedCar.Brand, &updatedCar.FuelType, &returnedEngineJSON, &updatedCar.LocationCity,
-		&updatedCar.LocationState, &updatedCar.LocationCountry, &returnedPriceJSON, &updatedCar.Status,
-		&updatedCar.AvailabilityType, &updatedCar.IsAvailable, &returnedFeaturesJSON,
+		&updatedCar.LocationState, &updatedCar.LocationCountry, &returnedPriceJSON, &updatedCar.Status, &updatedCar.IsAvailable, &returnedFeaturesJSON,
 		&updatedCar.Description, &returnedImages, &updatedCar.Mileage, &updatedCar.CreatedAt, &updatedCar.UpdatedAt)
 
 	if err != nil {
@@ -320,9 +300,6 @@ func (s CarStore) UpdateCar(ctx context.Context, id string, carReq models.CarReq
 
 	// Parse returned JSON fields
 	if err = json.Unmarshal(returnedEngineJSON, &updatedCar.Engine); err != nil {
-		return models.Car{}, err
-	}
-	if err = json.Unmarshal(returnedPriceJSON, &updatedCar.Price); err != nil {
 		return models.Car{}, err
 	}
 	if err = json.Unmarshal(returnedFeaturesJSON, &updatedCar.Features); err != nil {
@@ -355,17 +332,17 @@ func (s CarStore) DeleteCar(ctx context.Context, id string) (models.Car, error) 
 
 	// First get the car data before deleting
 	query := `SELECT id, owner_id, name, model, year, brand, fuel_type, engine, location_city, 
-	         location_state, location_country, price, status, availability_type, is_available, 
+	         location_state, location_country, price, status, is_available, 
 	         features, description, images, mileage, created_at, updated_at 
 	         FROM car WHERE id = $1`
 
-	var engineJSON, priceJSON, featuresJSON []byte
+	var engineJSON, featuresJSON []byte
 	var images pq.StringArray
 
 	err = tx.QueryRowContext(ctx, query, id).Scan(&deletedCar.ID, &deletedCar.OwnerID, &deletedCar.Name,
 		&deletedCar.Model, &deletedCar.Year, &deletedCar.Brand, &deletedCar.FuelType, &engineJSON,
-		&deletedCar.LocationCity, &deletedCar.LocationState, &deletedCar.LocationCountry, &priceJSON,
-		&deletedCar.Status, &deletedCar.AvailabilityType, &deletedCar.IsAvailable, &featuresJSON,
+		&deletedCar.LocationCity, &deletedCar.LocationState, &deletedCar.LocationCountry, &deletedCar.Price,
+		&deletedCar.Status, &deletedCar.IsAvailable, &featuresJSON,
 		&deletedCar.Description, &images, &deletedCar.Mileage, &deletedCar.CreatedAt, &deletedCar.UpdatedAt)
 
 	if err != nil {
@@ -377,12 +354,6 @@ func (s CarStore) DeleteCar(ctx context.Context, id string) (models.Car, error) 
 
 	// Parse JSON fields
 	if err = json.Unmarshal(engineJSON, &deletedCar.Engine); err != nil {
-		return models.Car{}, err
-	}
-	if err = json.Unmarshal(priceJSON, &deletedCar.Price); err != nil {
-		return models.Car{}, err
-	}
-	if err = json.Unmarshal(featuresJSON, &deletedCar.Features); err != nil {
 		return models.Car{}, err
 	}
 	deletedCar.Images = []string(images)
@@ -411,7 +382,7 @@ func (s CarStore) GetAllCars(ctx context.Context) ([]models.Car, error) {
 	var cars []models.Car
 
 	query := `SELECT id, owner_id, name, model, year, brand, fuel_type, engine, location_city, 
-	         location_state, location_country, price, status, availability_type, is_available, 
+	         location_state, location_country, price, status, is_available, 
 	         features, description, images, mileage, created_at, updated_at 
 	         FROM car`
 
@@ -423,12 +394,12 @@ func (s CarStore) GetAllCars(ctx context.Context) ([]models.Car, error) {
 
 	for rows.Next() {
 		var car models.Car
-		var engineJSON, priceJSON, featuresJSON []byte
+		var engineJSON, featuresJSON []byte
 		var images pq.StringArray
 
 		err = rows.Scan(&car.ID, &car.OwnerID, &car.Name, &car.Model, &car.Year, &car.Brand,
 			&car.FuelType, &engineJSON, &car.LocationCity, &car.LocationState, &car.LocationCountry,
-			&priceJSON, &car.Status, &car.AvailabilityType, &car.IsAvailable, &featuresJSON,
+			&car.Price, &car.Status, &car.IsAvailable, &featuresJSON,
 			&car.Description, &images, &car.Mileage, &car.CreatedAt, &car.UpdatedAt)
 
 		if err != nil {
@@ -437,9 +408,6 @@ func (s CarStore) GetAllCars(ctx context.Context) ([]models.Car, error) {
 
 		// Parse JSON fields
 		if err = json.Unmarshal(engineJSON, &car.Engine); err != nil {
-			return nil, err
-		}
-		if err = json.Unmarshal(priceJSON, &car.Price); err != nil {
 			return nil, err
 		}
 		if err = json.Unmarshal(featuresJSON, &car.Features); err != nil {
