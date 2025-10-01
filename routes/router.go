@@ -8,6 +8,7 @@ import (
 	authHandler "github.com/PrateekKumar15/CarZone/handler/auth"
 	bookingHandler "github.com/PrateekKumar15/CarZone/handler/booking"
 	carHandler "github.com/PrateekKumar15/CarZone/handler/car"
+	paymentHandler "github.com/PrateekKumar15/CarZone/handler/payment"
 	"github.com/PrateekKumar15/CarZone/middleware"
 )
 
@@ -16,14 +17,16 @@ type Router struct {
 	AuthHandler    *authHandler.AuthHandler
 	CarHandler     *carHandler.CarHandler
 	BookingHandler *bookingHandler.BookingHandler
+	PaymentHandler *paymentHandler.PaymentHandler
 }
 
 // NewRouter creates a new router instance with handler dependencies
-func NewRouter(authHandler *authHandler.AuthHandler, carHandler *carHandler.CarHandler, bookingHandler *bookingHandler.BookingHandler) *Router {
+func NewRouter(authHandler *authHandler.AuthHandler, carHandler *carHandler.CarHandler, bookingHandler *bookingHandler.BookingHandler, paymentHandler *paymentHandler.PaymentHandler) *Router {
 	return &Router{
 		AuthHandler:    authHandler,
 		CarHandler:     carHandler,
 		BookingHandler: bookingHandler,
+		PaymentHandler: paymentHandler,
 	}
 }
 
@@ -70,6 +73,7 @@ func (r *Router) setupProtectedRoutes(router *mux.Router) {
 	// Setup resource-specific routes
 	r.setupCarRoutes(protected)
 	r.setupBookingRoutes(protected)
+	r.setupPaymentRoutes(protected)
 }
 
 // setupMonitoringRoutes configures monitoring and metrics routes

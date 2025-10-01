@@ -172,3 +172,70 @@ type BookingServiceInterface interface {
 	//   - error: Business logic error or data access error
 	GetAllBookings(ctx context.Context) (*[]models.Booking, error)
 }
+
+// PaymentServiceInterface defines the contract for payment-related business logic operations.
+// This interface handles payment processing, Razorpay integration, and business rules.
+type PaymentServiceInterface interface {
+	// CreatePayment initiates a new payment process with Razorpay order creation.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - req: Payment request containing booking details and amount
+	// Returns:
+	//   - *models.RazorpayOrderResponse: Razorpay order details for frontend integration
+	//   - error: Validation error, business rule violation, or Razorpay API error
+	CreatePayment(ctx context.Context, req *models.PaymentRequest) (*models.RazorpayOrderResponse, error)
+
+	// VerifyPayment verifies Razorpay payment signature and updates payment status.
+	// Parameters:
+	//   - ctx: Request context for transaction management
+	//   - req: Payment verification request with Razorpay response data
+	// Returns:
+	//   - *models.Payment: Updated payment record with verification status
+	//   - error: Signature verification failure or update error
+	VerifyPayment(ctx context.Context, req *models.PaymentVerificationRequest) (*models.Payment, error)
+
+	// GetPaymentByID retrieves a specific payment record by its unique identifier.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - id: Unique identifier of the payment to retrieve
+	// Returns:
+	//   - *models.Payment: Pointer to the payment record
+	//   - error: Not found error or data access error
+	GetPaymentByID(ctx context.Context, id string) (*models.Payment, error)
+
+	// GetPaymentByBookingID retrieves payment record associated with a booking.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - bookingID: Unique identifier of the booking
+	// Returns:
+	//   - *models.Payment: Pointer to the payment record for the booking
+	//   - error: Not found error or data access error
+	GetPaymentByBookingID(ctx context.Context, bookingID string) (*models.Payment, error)
+
+	// GetPaymentsByUserID retrieves all payment records for a specific user.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - userID: Unique identifier of the user
+	// Returns:
+	//   - *[]models.Payment: Pointer to slice of user's payment records
+	//   - error: Data access error or business logic error
+	GetPaymentsByUserID(ctx context.Context, userID string) (*[]models.Payment, error)
+
+	// ProcessRefund initiates refund process for a completed payment.
+	// Parameters:
+	//   - ctx: Request context for transaction management
+	//   - paymentID: Unique identifier of the payment to refund
+	//   - amount: Refund amount (partial or full)
+	// Returns:
+	//   - *models.Payment: Updated payment record with refund status
+	//   - error: Business rule violation, Razorpay API error, or refund failure
+	ProcessRefund(ctx context.Context, paymentID string, amount float64) (*models.Payment, error)
+
+	// GetAllPayments retrieves all payment records with business filtering.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	// Returns:
+	//   - *[]models.Payment: Pointer to slice of all payment records
+	//   - error: Business logic error or data access error
+	GetAllPayments(ctx context.Context) (*[]models.Payment, error)
+}

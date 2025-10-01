@@ -36,10 +36,17 @@ import (
 	// Data access layer for booking
 	bookingStore "github.com/PrateekKumar15/CarZone/store/booking"
 
+	// Data access layer for payment
+	paymentStore "github.com/PrateekKumar15/CarZone/store/payment"
+
 	// Third-party dependencies
 	authHandler "github.com/PrateekKumar15/CarZone/handler/auth"
 	authService "github.com/PrateekKumar15/CarZone/service/auth"
 	userStore "github.com/PrateekKumar15/CarZone/store/user"
+
+	// Payment components
+	paymentHandler "github.com/PrateekKumar15/CarZone/handler/payment"
+	paymentService "github.com/PrateekKumar15/CarZone/service/payment"
 	"github.com/joho/godotenv" // Environment variable loader
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
@@ -99,19 +106,23 @@ func main() {
 
 	userStore := userStore.New(db)
 
+	paymentStore := paymentStore.New(db)
+
 	// Business Logic Layer (Services) - Handle domain logic and validation
 	carService := carService.NewCarService(carStore)
 	bookingService := bookingService.NewBookingService(bookingStore, carStore)
 	authService := authService.NewAuthService(userStore)
+	paymentService := paymentService.NewPaymentService(paymentStore, bookingStore)
 
 	// Presentation Layer (Handlers) - Handle HTTP requests/responses
 	carHandler := carHandler.NewCarHandler(carService)
 	bookingHandler := bookingHandler.NewBookingHandler(bookingService)
 	authHandler := authHandler.NewAuthHandler(authService)
+	paymentHandler := paymentHandler.NewPaymentHandler(paymentService)
 
 	// Step 4: Initialize routes using the routes layer
 	// Create router with all handler dependencies injected
-	routeManager := routes.NewRouter(authHandler, carHandler, bookingHandler)
+	routeManager := routes.NewRouter(authHandler, carHandler, bookingHandler, paymentHandler)
 	router := routeManager.SetupRoutes()
 
 	// Execute schema file to set up database structure
@@ -171,6 +182,15 @@ func main() {
 	log.Println("    GET    /bookings/customer/{id}      - Get bookings by customer")
 	log.Println("    GET    /bookings/car/{id}           - Get bookings by car")
 	log.Println("    GET    /bookings/owner/{id}         - Get bookings by owner")
+	log.Println("")
+	log.Println("  💳 Payment Management (Protected):")
+	log.Println("    POST   /payments                     - Create payment and Razorpay order")
+	log.Println("    POST   /payments/verify              - Verify payment signature")
+	log.Println("    GET    /payments/{id}                - Get payment by ID")
+	log.Println("    GET    /payments/booking/{booking_id} - Get payment by booking ID")
+	log.Println("    GET    /payments/user/{user_id}      - Get payments by user ID")
+	log.Println("    POST   /payments/{payment_id}/refund - Process payment refund")
+	log.Println("    GET    /payments                     - Get all payments")
 	log.Println("")
 	log.Println("  📊 Monitoring:")
 	log.Println("    GET /metrics - Prometheus metrics")

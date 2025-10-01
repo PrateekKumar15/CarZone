@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/PrateekKumar15/CarZone/models"
+	"github.com/google/uuid"
 )
 
 // CarStoreInterface defines the contract for car data access operations.
@@ -230,4 +231,94 @@ type BookingStoreInterface interface {
 	//   - []models.Booking: Slice of all booking records
 	//   - error: Error if database operation fails
 	GetAllBookings(ctx context.Context) ([]models.Booking, error)
+}
+
+// PaymentStoreInterface defines the contract for payment data access operations.
+// This interface abstracts all database operations related to payment entities,
+// following the Repository pattern to decouple business logic from data persistence.
+// All methods accept a context for request scoping, cancellation, and timeout handling.
+type PaymentStoreInterface interface {
+	// GetPaymentByID retrieves a single payment record by its unique identifier.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - id: Unique identifier of the payment (UUID string format)
+	// Returns:
+	//   - models.Payment: The payment record if found
+	//   - error: Error if payment not found or database operation fails
+	GetPaymentByID(ctx context.Context, id string) (models.Payment, error)
+
+	// GetPaymentsByBookingID retrieves all payments for a specific booking.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - bookingID: Unique identifier of the booking
+	// Returns:
+	//   - []models.Payment: Slice of payment records for the booking
+	//   - error: Error if database operation fails
+	GetPaymentsByBookingID(ctx context.Context, bookingID string) ([]models.Payment, error)
+
+	// GetPaymentByRazorpayOrderID retrieves a payment by Razorpay order ID.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - orderID: Razorpay order identifier
+	// Returns:
+	//   - models.Payment: The payment record if found
+	//   - error: Error if payment not found or database operation fails
+	GetPaymentByRazorpayOrderID(ctx context.Context, orderID string) (models.Payment, error)
+
+	// CreatePayment inserts a new payment record into the database.
+	// Parameters:
+	//   - ctx: Request context for transaction management
+	//   - paymentReq: Payment data to be inserted
+	// Returns:
+	//   - models.Payment: The created payment record with generated ID and timestamps
+	//   - error: Error if creation fails or validation errors occur
+	CreatePayment(ctx context.Context, paymentReq models.PaymentRequest) (models.Payment, error)
+
+	// UpdatePaymentWithRazorpayDetails updates payment with Razorpay order details.
+	// Parameters:
+	//   - ctx: Request context for transaction management
+	//   - paymentID: Unique identifier of the payment to update
+	//   - orderID: Razorpay order ID to associate with the payment
+	// Returns:
+	//   - models.Payment: The updated payment record
+	//   - error: Error if payment not found or update operation fails
+	UpdatePaymentWithRazorpayDetails(ctx context.Context, paymentID uuid.UUID, orderID string) (models.Payment, error)
+
+	// UpdatePaymentStatus updates the payment status and associated IDs.
+	// Parameters:
+	//   - ctx: Request context for transaction management
+	//   - id: Unique identifier of the payment to update
+	//   - status: New payment status
+	//   - paymentID: Razorpay payment ID (optional)
+	//   - transactionID: Transaction reference ID (optional)
+	// Returns:
+	//   - models.Payment: The updated payment record
+	//   - error: Error if payment not found or update operation fails
+	UpdatePaymentStatus(ctx context.Context, id string, status models.PaymentStatus, paymentID *string, transactionID *string) (models.Payment, error)
+
+	// DeletePayment removes a payment record from the database.
+	// Parameters:
+	//   - ctx: Request context for transaction management
+	//   - id: Unique identifier of the payment to delete
+	// Returns:
+	//   - models.Payment: The deleted payment record
+	//   - error: Error if payment not found or deletion fails
+	DeletePayment(ctx context.Context, id string) (models.Payment, error)
+
+	// GetPaymentsByUserID retrieves all payments for a specific user.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	//   - userID: Unique identifier of the user
+	// Returns:
+	//   - []models.Payment: Slice of payment records for the user
+	//   - error: Error if database operation fails
+	GetPaymentsByUserID(ctx context.Context, userID string) ([]models.Payment, error)
+
+	// GetAllPayments retrieves all payment records from the database.
+	// Parameters:
+	//   - ctx: Request context for cancellation and timeout
+	// Returns:
+	//   - []models.Payment: Slice of all payment records
+	//   - error: Error if database operation fails
+	GetAllPayments(ctx context.Context) ([]models.Payment, error)
 }

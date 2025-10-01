@@ -7,6 +7,7 @@
 -- =============================================================================
 
 -- Drop existing tables if they exist (for complete reset)
+DROP TABLE IF EXISTS payment CASCADE;
 DROP TABLE IF EXISTS booking CASCADE;
 DROP TABLE IF EXISTS car CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
@@ -57,12 +58,12 @@ CREATE TABLE car (
     location_state VARCHAR(255) NOT NULL,                        -- State/province where car is located
     location_country VARCHAR(255) NOT NULL,                      -- Country where car is located
     
-    -- Pricing information stored as JSONB for flexible pricing models
-    price JSONB NOT NULL,                                        -- Pricing: {rental_price_daily, sale_price}
+    -- Pricing information as simple decimal for rental pricing
+    price DECIMAL(10,2) NOT NULL,                               -- Daily rental price
     
     -- Status and availability
     status VARCHAR(50) DEFAULT 'active',                         -- active, maintenance, inactive
-    availability_type VARCHAR(50) NOT NULL,                      -- rental, sale, both
+    availability_type VARCHAR(50) NOT NULL DEFAULT 'rental',     -- rental only
     is_available BOOLEAN DEFAULT true,                           -- Current availability status
     
     -- Additional information
@@ -87,17 +88,43 @@ CREATE TABLE booking (
     car_id UUID NOT NULL,                                        -- Reference to car.id
     owner_id UUID,                                               -- Reference to users.id (car owner, nullable for system cars)
     
-    -- Booking details
-    booking_type VARCHAR(50) NOT NULL,                           -- rental, sale
+    -- Booking details (all bookings are rentals)
     status VARCHAR(50) DEFAULT 'pending',                        -- pending, confirmed, active, completed, cancelled
     total_amount DECIMAL(10,2) NOT NULL,                         -- Total booking amount
-    start_date TIMESTAMP,                                        -- Start date for rentals (nullable for sales)
-    end_date TIMESTAMP,                                          -- End date for rentals (nullable for sales)
+    start_date TIMESTAMP NOT NULL,                               -- Start date for rental
+    end_date TIMESTAMP NOT NULL,                                 -- End date for rental
     notes TEXT,                                                  -- Additional notes or special requests
     
     -- Audit trail columns
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,              -- Booking creation timestamp
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP               -- Last update timestamp
+);
+
+-- Payment Table Definition
+-- Stores payment information for bookings with Razorpay integration
+CREATE TABLE payment (
+    -- Primary key: Unique identifier for each payment
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Relationship fields
+    booking_id UUID NOT NULL,                                    -- Reference to booking.id
+    
+    -- Razorpay specific fields
+    razorpay_order_id VARCHAR(255),                             -- Razorpay order ID
+    razorpay_payment_id VARCHAR(255),                           -- Razorpay payment ID
+    
+    -- Payment details
+    amount DECIMAL(10,2) NOT NULL,                              -- Payment amount in INR
+    currency VARCHAR(3) DEFAULT 'INR',                          -- Currency code
+    status VARCHAR(50) DEFAULT 'pending',                       -- pending, completed, failed, refunded, cancelled
+    method VARCHAR(50) NOT NULL,                                -- razorpay, cash, card, upi, netbanking
+    transaction_id VARCHAR(255),                                -- Transaction reference ID
+    description TEXT,                                           -- Payment description
+    notes TEXT,                                                 -- Additional payment notes
+    
+    -- Audit trail columns
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,             -- Payment creation timestamp
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP              -- Last update timestamp
 );
 
 -- =============================================================================
@@ -130,27 +157,47 @@ FOREIGN KEY (owner_id)
 REFERENCES users(id)
 ON DELETE SET NULL;                                              -- Set owner_id to NULL when owner is deleted
 
--- Check constraints for data validation
-ALTER TABLE booking
-ADD CONSTRAINT check_booking_type 
-CHECK (booking_type IN ('rental', 'sale'));
+-- Foreign Key Constraints for payment table
+ALTER TABLE payment
+ADD CONSTRAINT fk_payment_booking_id
+FOREIGN KEY (booking_id)
+REFERENCES booking(id)
+ON DELETE CASCADE;                                               -- Delete payment when booking is deleted
 
+-- Check constraints for data validation
 ALTER TABLE booking
 ADD CONSTRAINT check_booking_status 
 CHECK (status IN ('pending', 'confirmed', 'active', 'completed', 'cancelled'));
 
 ALTER TABLE booking
 ADD CONSTRAINT check_booking_dates 
-CHECK (end_date IS NULL OR start_date IS NULL OR end_date >= start_date);
+CHECK (end_date >= start_date);
 
 ALTER TABLE booking
 ADD CONSTRAINT check_total_amount 
 CHECK (total_amount > 0);
 
+-- Check constraints for payment validation
+ALTER TABLE payment
+ADD CONSTRAINT check_payment_status 
+CHECK (status IN ('pending', 'completed', 'failed', 'refunded', 'cancelled'));
+
+ALTER TABLE payment
+ADD CONSTRAINT check_payment_method 
+CHECK (method IN ('razorpay', 'cash', 'card', 'upi', 'netbanking'));
+
+ALTER TABLE payment
+ADD CONSTRAINT check_payment_amount 
+CHECK (amount > 0);
+
+ALTER TABLE payment
+ADD CONSTRAINT check_payment_currency 
+CHECK (currency = 'INR');
+
 -- Check constraints for data validation
 ALTER TABLE car
 ADD CONSTRAINT check_availability_type 
-CHECK (availability_type IN ('rental', 'sale', 'both'));
+CHECK (availability_type IN ('rental'));
 
 ALTER TABLE car
 ADD CONSTRAINT check_status 
@@ -187,21 +234,27 @@ CREATE INDEX idx_car_status ON car(status);
 
 -- JSONB indexes for engine and price searches
 CREATE INDEX idx_car_engine_gin ON car USING gin(engine);
-CREATE INDEX idx_car_price_gin ON car USING gin(price);
-
--- Specific JSONB path indexes for common queries
+-- Specific index for common price queries
 CREATE INDEX idx_car_engine_horsepower ON car USING btree((engine->>'horsepower'));
-CREATE INDEX idx_car_price_daily ON car USING btree((price->>'rental_price_daily'));
-CREATE INDEX idx_car_price_sale ON car USING btree((price->>'sale_price'));
+CREATE INDEX idx_car_price ON car USING btree(price);
 
 -- Booking table indexes for performance
 CREATE INDEX idx_booking_customer_id ON booking(customer_id);
 CREATE INDEX idx_booking_car_id ON booking(car_id);
 CREATE INDEX idx_booking_owner_id ON booking(owner_id);
 CREATE INDEX idx_booking_status ON booking(status);
-CREATE INDEX idx_booking_type ON booking(booking_type);
+-- Removed: booking_type index (no longer needed for rental-only platform)
 CREATE INDEX idx_booking_dates ON booking(start_date, end_date);
 CREATE INDEX idx_booking_created_at ON booking(created_at);
+
+-- Payment table indexes for performance
+CREATE INDEX idx_payment_booking_id ON payment(booking_id);
+CREATE INDEX idx_payment_status ON payment(status);
+CREATE INDEX idx_payment_method ON payment(method);
+CREATE INDEX idx_payment_razorpay_order_id ON payment(razorpay_order_id);
+CREATE INDEX idx_payment_razorpay_payment_id ON payment(razorpay_payment_id);
+CREATE INDEX idx_payment_transaction_id ON payment(transaction_id);
+CREATE INDEX idx_payment_created_at ON payment(created_at);
 
 -- =============================================================================
 -- TRIGGERS FOR AUTOMATIC TIMESTAMP UPDATES
@@ -229,6 +282,11 @@ CREATE TRIGGER update_car_updated_at
 
 CREATE TRIGGER update_booking_updated_at 
     BEFORE UPDATE ON booking 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_payment_updated_at 
+    BEFORE UPDATE ON payment 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
@@ -264,7 +322,7 @@ INSERT INTO car (id, owner_id, name, brand, model, year, fuel_type, engine, loca
      'Reliable Daily Driver', 'Toyota', 'Camry', 2023, 'Petrol',
      '{"engine_size": 2.5, "cylinders": 4, "horsepower": 203, "transmission": "Automatic"}',
      'San Francisco', 'California', 'United States',
-     '{"rental_price_daily": 45.00, "sale_price": null}',
+     45.00,
      'active', 'rental', true,
      '{"gps": true, "air_conditioning": true, "bluetooth": true, "backup_camera": true, "keyless_entry": true}',
      'Well-maintained 2023 Toyota Camry perfect for city driving and longer trips. Recently serviced with excellent fuel economy.',
@@ -276,8 +334,8 @@ INSERT INTO car (id, owner_id, name, brand, model, year, fuel_type, engine, loca
      'City Commuter', 'Honda', 'Civic', 2022, 'Petrol',
      '{"engine_size": 2.0, "cylinders": 4, "horsepower": 158, "transmission": "CVT"}',
      'San Francisco', 'California', 'United States',
-     '{"rental_price_daily": 35.00, "sale_price": 22500.00}',
-     'active', 'both', true,
+     35.00,
+     'active', 'rental', true,
      '{"gps": false, "air_conditioning": true, "bluetooth": true, "backup_camera": false, "keyless_entry": false}',
      'Fuel-efficient Honda Civic ideal for city commuting. Available for both rental and purchase.',
      ARRAY['https://example.com/images/civic1.jpg'],
@@ -289,7 +347,7 @@ INSERT INTO car (id, owner_id, name, brand, model, year, fuel_type, engine, loca
      'Family SUV', 'Honda', 'CR-V', 2024, 'Petrol',
      '{"engine_size": 1.5, "cylinders": 4, "horsepower": 190, "transmission": "CVT"}',
      'Los Angeles', 'California', 'United States',
-     '{"rental_price_daily": 65.00, "sale_price": null}',
+     65.00,
      'active', 'rental', true,
      '{"gps": true, "air_conditioning": true, "bluetooth": true, "backup_camera": true, "keyless_entry": true, "all_wheel_drive": true, "third_row_seating": false}',
      'Spacious and reliable Honda CR-V perfect for family trips and outdoor adventures. Features all-wheel drive for various weather conditions.',
@@ -301,8 +359,8 @@ INSERT INTO car (id, owner_id, name, brand, model, year, fuel_type, engine, loca
      'Luxury Sedan', 'BMW', '3 Series', 2024, 'Petrol',
      '{"engine_size": 2.0, "cylinders": 4, "horsepower": 255, "transmission": "Automatic"}',
      'Los Angeles', 'California', 'United States',
-     '{"rental_price_daily": 120.00, "sale_price": 45999.00}',
-     'active', 'both', true,
+     120.00,
+     'active', 'rental', true,
      '{"gps": true, "air_conditioning": true, "bluetooth": true, "backup_camera": true, "keyless_entry": true, "leather_seats": true, "sunroof": true, "premium_audio": true}',
      'Premium BMW 3 Series with luxury features and outstanding performance. Perfect for business trips or special occasions.',
      ARRAY['https://example.com/images/bmw3series1.jpg', 'https://example.com/images/bmw3series2.jpg'],
@@ -313,8 +371,8 @@ INSERT INTO car (id, owner_id, name, brand, model, year, fuel_type, engine, loca
      'Weekend Sports Car', 'Mazda', 'MX-5 Miata', 2023, 'Petrol',
      '{"engine_size": 2.0, "cylinders": 4, "horsepower": 181, "transmission": "Manual"}',
      'Los Angeles', 'California', 'United States',
-     '{"rental_price_daily": 85.00, "sale_price": 31500.00}',
-     'active', 'both', true,
+     85.00,
+     'active', 'rental', true,
      '{"gps": false, "air_conditioning": true, "bluetooth": true, "backup_camera": false, "keyless_entry": true, "convertible": true, "sport_mode": true}',
      'Fun and sporty Mazda MX-5 Miata convertible. Perfect for weekend getaways and scenic drives along the coast.',
      ARRAY['https://example.com/images/miata1.jpg', 'https://example.com/images/miata2.jpg'],
@@ -326,8 +384,8 @@ INSERT INTO car (id, owner_id, name, brand, model, year, fuel_type, engine, loca
      'Eco-Friendly Tesla', 'Tesla', 'Model 3', 2024, 'Electric',
      '{"engine_size": 0, "cylinders": 0, "horsepower": 283, "transmission": "Single-Speed"}',
      'Seattle', 'Washington', 'United States',
-     '{"rental_price_daily": 95.00, "sale_price": 42990.00}',
-     'active', 'both', true,
+     95.00,
+     'active', 'rental', true,
      '{"gps": true, "air_conditioning": true, "bluetooth": true, "backup_camera": true, "keyless_entry": true, "autopilot": true, "supercharging": true, "premium_connectivity": true}',
      'State-of-the-art Tesla Model 3 with autopilot and premium features. Zero emissions and cutting-edge technology for the environmentally conscious driver.',
      ARRAY['https://example.com/images/tesla1.jpg', 'https://example.com/images/tesla2.jpg', 'https://example.com/images/tesla3.jpg'],
@@ -339,7 +397,7 @@ INSERT INTO car (id, owner_id, name, brand, model, year, fuel_type, engine, loca
      'Corporate Fleet Vehicle', 'Toyota', 'Prius', 2023, 'Hybrid',
      '{"engine_size": 1.8, "cylinders": 4, "horsepower": 121, "transmission": "CVT"}',
      'New York', 'New York', 'United States',
-     '{"rental_price_daily": 50.00, "sale_price": null}',
+     50.00,
      'active', 'rental', true,
      '{"gps": true, "air_conditioning": true, "bluetooth": true, "backup_camera": true, "keyless_entry": false, "hybrid_system": true}',
      'Fuel-efficient Toyota Prius hybrid perfect for city driving. Part of CarZone corporate fleet with excellent fuel economy.',
@@ -351,7 +409,7 @@ INSERT INTO car (id, owner_id, name, brand, model, year, fuel_type, engine, loca
      'Premium Rental', 'Audi', 'A4', 2024, 'Petrol',
      '{"engine_size": 2.0, "cylinders": 4, "horsepower": 261, "transmission": "Automatic"}',
      'Miami', 'Florida', 'United States',
-     '{"rental_price_daily": 110.00, "sale_price": null}',
+     110.00,
      'active', 'rental', true,
      '{"gps": true, "air_conditioning": true, "bluetooth": true, "backup_camera": true, "keyless_entry": true, "leather_seats": true, "navigation": true, "premium_audio": true}',
      'Luxury Audi A4 sedan with premium features and exceptional comfort. Perfect for business travel and special events.',
@@ -364,8 +422,8 @@ INSERT INTO car (id, owner_id, name, brand, model, year, fuel_type, engine, loca
      'Under Maintenance', 'Ford', 'Escape', 2022, 'Petrol',
      '{"engine_size": 1.5, "cylinders": 3, "horsepower": 181, "transmission": "Automatic"}',
      'Chicago', 'Illinois', 'United States',
-     '{"rental_price_daily": 55.00, "sale_price": 26800.00}',
-     'maintenance', 'both', false,
+     55.00,
+     'maintenance', 'rental', false,
      '{"gps": true, "air_conditioning": true, "bluetooth": true, "backup_camera": true, "keyless_entry": true}',
      'Ford Escape currently undergoing scheduled maintenance. Will be available for rental and purchase soon.',
      ARRAY['https://example.com/images/escape1.jpg'],
@@ -376,8 +434,8 @@ INSERT INTO car (id, owner_id, name, brand, model, year, fuel_type, engine, loca
      'Sale Only Vehicle', 'Volkswagen', 'Jetta', 2021, 'Petrol',
      '{"engine_size": 1.4, "cylinders": 4, "horsepower": 147, "transmission": "Manual"}',
      'Austin', 'Texas', 'United States',
-     '{"rental_price_daily": null, "sale_price": 18500.00}',
-     'active', 'sale', true,
+     40.00,
+     'active', 'rental', true,
      '{"gps": false, "air_conditioning": true, "bluetooth": true, "backup_camera": false, "keyless_entry": false}',
      'Well-maintained Volkswagen Jetta available for purchase only. Great first car or reliable daily driver.',
      ARRAY['https://example.com/images/jetta1.jpg'],
@@ -385,14 +443,14 @@ INSERT INTO car (id, owner_id, name, brand, model, year, fuel_type, engine, loca
 
 -- Insert comprehensive sample booking data
 -- These bookings represent different scenarios: rentals, sales, various statuses
-INSERT INTO booking (id, customer_id, car_id, owner_id, booking_type, status, total_amount, start_date, end_date, notes) VALUES
+INSERT INTO booking (id, customer_id, car_id, owner_id, status, total_amount, start_date, end_date, notes) VALUES
 
     -- Confirmed rental bookings
     ('b0000001-0000-4000-8000-000000000001',
      '44444444-0000-4000-8000-000000000004',  -- Sarah Wilson (customer)
      'c0000001-0000-4000-8000-000000000001',  -- John's Toyota Camry
      '11111111-0000-4000-8000-000000000001',  -- John Doe (owner)
-     'rental', 'confirmed', 135.00,
+     'confirmed', 135.00,
      '2024-02-01 10:00:00', '2024-02-04 10:00:00',
      'Weekend getaway trip to Napa Valley. Customer has excellent driving record.'),
 
@@ -400,7 +458,7 @@ INSERT INTO booking (id, customer_id, car_id, owner_id, booking_type, status, to
      '55555555-0000-4000-8000-000000000005',  -- David Brown (customer)
      'c0000003-0000-4000-8000-000000000003',  -- Jane's Honda CR-V
      '22222222-0000-4000-8000-000000000002',  -- Jane Smith (owner)
-     'rental', 'confirmed', 325.00,
+     'confirmed', 325.00,
      '2024-02-05 09:00:00', '2024-02-10 09:00:00',
      'Family vacation to Lake Tahoe. Requesting child seat installation.'),
 
@@ -409,7 +467,7 @@ INSERT INTO booking (id, customer_id, car_id, owner_id, booking_type, status, to
      '44444444-0000-4000-8000-000000000004',  -- Sarah Wilson (customer)
      'c0000006-0000-4000-8000-000000000006',  -- Mike's Tesla Model 3
      '33333333-0000-4000-8000-000000000003',  -- Mike Johnson (owner)
-     'rental', 'active', 285.00,
+     'active', 285.00,
      '2024-01-28 14:00:00', '2024-01-31 14:00:00',
      'Business trip to Portland. Customer specifically requested electric vehicle.'),
 
@@ -418,7 +476,7 @@ INSERT INTO booking (id, customer_id, car_id, owner_id, booking_type, status, to
      '55555555-0000-4000-8000-000000000005',  -- David Brown (customer)
      'c0000002-0000-4000-8000-000000000002',  -- John's Honda Civic
      '11111111-0000-4000-8000-000000000001',  -- John Doe (owner)
-     'rental', 'completed', 70.00,
+     'completed', 70.00,
      '2024-01-15 12:00:00', '2024-01-17 12:00:00',
      'Quick rental for airport transportation. Customer very satisfied.'),
 
@@ -426,7 +484,7 @@ INSERT INTO booking (id, customer_id, car_id, owner_id, booking_type, status, to
      '44444444-0000-4000-8000-000000000004',  -- Sarah Wilson (customer)
      'c0000005-0000-4000-8000-000000000005',  -- Jane's Mazda MX-5 Miata
      '22222222-0000-4000-8000-000000000002',  -- Jane Smith (owner)
-     'rental', 'completed', 255.00,
+     'completed', 255.00,
      '2024-01-20 11:00:00', '2024-01-23 11:00:00',
      'Weekend convertible rental for anniversary celebration.'),
 
@@ -435,7 +493,7 @@ INSERT INTO booking (id, customer_id, car_id, owner_id, booking_type, status, to
      '55555555-0000-4000-8000-000000000005',  -- David Brown (customer)
      'c0000004-0000-4000-8000-000000000004',  -- Jane's BMW 3 Series
      '22222222-0000-4000-8000-000000000002',  -- Jane Smith (owner)
-     'rental', 'pending', 360.00,
+     'pending', 360.00,
      '2024-02-15 16:00:00', '2024-02-18 16:00:00',
      'Business conference in downtown LA. Awaiting license verification.'),
 
@@ -443,7 +501,7 @@ INSERT INTO booking (id, customer_id, car_id, owner_id, booking_type, status, to
      '44444444-0000-4000-8000-000000000004',  -- Sarah Wilson (customer)
      'c0000007-0000-4000-8000-000000000007',  -- Corporate Toyota Prius
      NULL,                                    -- No individual owner (corporate fleet)
-     'rental', 'pending', 100.00,
+     'pending', 100.00,
      '2024-02-10 08:00:00', '2024-02-12 08:00:00',
      'Eco-friendly option for client meetings. Customer prefers hybrid vehicles.'),
 
@@ -452,7 +510,7 @@ INSERT INTO booking (id, customer_id, car_id, owner_id, booking_type, status, to
      '55555555-0000-4000-8000-000000000005',  -- David Brown (customer)
      'c0000008-0000-4000-8000-000000000008',  -- Corporate Audi A4
      NULL,                                    -- No individual owner (corporate fleet)
-     'rental', 'cancelled', 220.00,
+     'cancelled', 220.00,
      '2024-01-25 13:00:00', '2024-01-27 13:00:00',
      'Customer cancelled due to change in travel plans. Full refund processed.'),
 
@@ -461,33 +519,33 @@ INSERT INTO booking (id, customer_id, car_id, owner_id, booking_type, status, to
      '44444444-0000-4000-8000-000000000004',  -- Sarah Wilson (customer)
      'c0000010-0000-4000-8000-000000000010', -- John's Volkswagen Jetta
      '11111111-0000-4000-8000-000000000001',  -- John Doe (owner)
-     'sale', 'confirmed', 18500.00,
-     NULL, NULL,                              -- No dates for sales
-     'Cash purchase. Vehicle inspection completed successfully. Transfer paperwork in progress.'),
+     'confirmed', 160.00,
+     '2024-02-20 09:00:00', '2024-02-24 09:00:00',
+     'Extended rental for business meetings. Customer satisfied with vehicle condition.'),
 
     ('b0000010-0000-4000-8000-000000000010',
      '55555555-0000-4000-8000-000000000005',  -- David Brown (customer)
      'c0000002-0000-4000-8000-000000000002',  -- John's Honda Civic (available for both)
      '11111111-0000-4000-8000-000000000001',  -- John Doe (owner)
-     'sale', 'pending', 22500.00,
-     NULL, NULL,                              -- No dates for sales
-     'Financing pre-approval pending. Customer very interested and ready to proceed.'),
+     'pending', 105.00,
+     '2024-02-25 10:00:00', '2024-02-28 10:00:00',
+     'Weekend rental pending final verification. Customer has good rental history.'),
 
     -- Completed sale
     ('b0000011-0000-4000-8000-000000000011',
      '44444444-0000-4000-8000-000000000004',  -- Sarah Wilson (customer)
      'c0000005-0000-4000-8000-000000000005',  -- Jane's Mazda MX-5 Miata
      '22222222-0000-4000-8000-000000000002',  -- Jane Smith (owner)
-     'sale', 'completed', 31500.00,
-     NULL, NULL,                              -- No dates for sales
-     'Sale completed successfully. Customer loves the convertible. Title transferred.'),
+     'completed', 255.00,
+     '2024-02-10 11:00:00', '2024-02-13 11:00:00',
+     'Completed rental. Customer enjoyed the convertible experience. Excellent feedback.'),
 
     -- More diverse rental scenarios
     ('b0000012-0000-4000-8000-000000000012',
      '44444444-0000-4000-8000-000000000004',  -- Sarah Wilson (customer)
      'c0000008-0000-4000-8000-000000000008',  -- Corporate Audi A4
      NULL,                                    -- Corporate vehicle
-     'rental', 'confirmed', 440.00,
+     'confirmed', 440.00,
      '2024-02-20 15:00:00', '2024-02-24 15:00:00',
      'Corporate client rental. Premium vehicle for important business meetings.'),
 
@@ -496,14 +554,14 @@ INSERT INTO booking (id, customer_id, car_id, owner_id, booking_type, status, to
      '55555555-0000-4000-8000-000000000005',  -- David Brown (customer)
      'c0000001-0000-4000-8000-000000000001',  -- John's Toyota Camry
      '11111111-0000-4000-8000-000000000001',  -- John Doe (owner)
-     'rental', 'confirmed', 1350.00,
+     'confirmed', 1350.00,
      '2024-03-01 10:00:00', '2024-03-31 10:00:00',
              'Month-long rental while customer''s car is being repaired. Excellent customer history.'),    -- Recent completed booking
     ('b0000014-0000-4000-8000-000000000014',
      '44444444-0000-4000-8000-000000000004',  -- Sarah Wilson (customer)
      'c0000007-0000-4000-8000-000000000007',  -- Corporate Toyota Prius
      NULL,                                    -- Corporate vehicle
-     'rental', 'completed', 150.00,
+     'completed', 150.00,
      '2024-01-22 09:00:00', '2024-01-25 09:00:00',
      'Eco-friendly rental for environmental conference. Customer very pleased with fuel efficiency.'),
 
@@ -512,7 +570,7 @@ INSERT INTO booking (id, customer_id, car_id, owner_id, booking_type, status, to
      '55555555-0000-4000-8000-000000000005',  -- David Brown (customer)
      'c0000006-0000-4000-8000-000000000006',  -- Mike's Tesla Model 3
      '33333333-0000-4000-8000-000000000003',  -- Mike Johnson (owner)
-     'rental', 'pending', 475.00,
+     'pending', 475.00,
      '2024-03-15 11:00:00', '2024-03-20 11:00:00',
      'Customer wants to try electric vehicle before potential purchase. Special EV orientation requested.');
 
@@ -536,7 +594,7 @@ INSERT INTO booking (id, customer_id, car_id, owner_id, booking_type, status, to
 --     c.fuel_type,
 --     c.engine->>'horsepower' as horsepower,
 --     c.engine->>'transmission' as transmission,
---     c.price->>'rental_price_daily' as daily_rental,
+--     c.price as daily_rental,
 --     c.price->>'sale_price' as sale_price,
 --     u.username as owner_username
 -- FROM car c 
@@ -547,14 +605,14 @@ INSERT INTO booking (id, customer_id, car_id, owner_id, booking_type, status, to
 -- SELECT name, brand, model FROM car WHERE engine->>'horsepower' > '200';
 
 -- Query to test price filtering  
--- SELECT name, brand, price->>'rental_price_daily' as daily_rate 
+-- SELECT name, brand, price as daily_rate 
 -- FROM car 
--- WHERE (price->>'rental_price_daily')::numeric < 60;
+-- WHERE price < 60;
 
 -- Sample booking queries for testing
 -- SELECT 
 --     b.id,
---     b.booking_type,
+--     b.status,
 --     b.status,
 --     b.total_amount,
 --     b.start_date,
@@ -574,7 +632,7 @@ INSERT INTO booking (id, customer_id, car_id, owner_id, booking_type, status, to
 -- SELECT status, COUNT(*) as count FROM booking GROUP BY status;
 
 -- Query to test booking type filtering
--- SELECT booking_type, COUNT(*) as count FROM booking GROUP BY booking_type;
+-- SELECT status, COUNT(*) as count FROM booking GROUP BY status;
 
 -- =============================================================================
 -- SCHEMA SUMMARY
