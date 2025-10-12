@@ -10,11 +10,11 @@ import (
 	"strings"
 
 	"github.com/PrateekKumar15/CarZone/models"
-	"github.com/PrateekKumar15/CarZone/service/s3"
+	"github.com/PrateekKumar15/CarZone/service/cloudinary"
 	"github.com/gorilla/mux"
 )
 
-// ImageUploadMiddleware handles simple image uploads to S3
+// ImageUploadMiddleware handles image uploads to Cloudinary
 func ImageUploadMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Only process POST and PUT requests
@@ -51,16 +51,28 @@ func ImageUploadMiddleware(next http.Handler) http.Handler {
 
 		// If there are images and they look like base64, upload them
 		if len(carRequest.Images) > 0 {
-			s3Service, err := s3.NewS3Service(
-				getEnv("AWS_S3_BUCKET_NAME", "carzone-images"),
-				getEnv("AWS_REGION", "us-east-1"),
+			println("📸 Processing", len(carRequest.Images), "images...")
+			cloudinaryService, err := cloudinary.NewCloudinaryService(
+				getEnv("CLOUDINARY_CLOUD_NAME", ""),
+				getEnv("CLOUDINARY_API_KEY", ""),
+				getEnv("CLOUDINARY_API_SECRET", ""),
+				getEnv("CLOUDINARY_FOLDER", "carzone/cars"),
 			)
-			if err == nil {
+			if err != nil {
+				println("❌ Failed to initialize Cloudinary service:", err.Error())
+			} else {
+				println("✅ Cloudinary service initialized successfully")
 				for i, img := range carRequest.Images {
 					if !isURL(img) { // If not already a URL, try to upload
-						if url, err := s3Service.UploadBase64Image(r.Context(), img, "car_image.jpg"); err == nil {
+						println("📤 Uploading image", i+1, "- Size:", len(img), "bytes")
+						if url, err := cloudinaryService.UploadBase64Image(r.Context(), img, "car_image.jpg"); err == nil {
+							println("✅ Image", i+1, "uploaded successfully:", url)
 							carRequest.Images[i] = url
+						} else {
+							println("❌ Failed to upload image", i+1, ":", err.Error())
 						}
+					} else {
+						println("⏭️  Image", i+1, "is already a URL, skipping")
 					}
 				}
 			}
@@ -74,7 +86,7 @@ func ImageUploadMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// cleanupOldImages removes old images from S3 when updating a car
+// cleanupOldImages removes old images from Cloudinary when updating a car
 func cleanupOldImages(ctx context.Context, carID string, newImages []string) {
 	// Get old car images from database
 	oldImages := GetCarImages(ctx, carID)
@@ -82,9 +94,11 @@ func cleanupOldImages(ctx context.Context, carID string, newImages []string) {
 		return
 	}
 
-	s3Service, err := s3.NewS3Service(
-		getEnv("AWS_S3_BUCKET_NAME", "carzone-images"),
-		getEnv("AWS_REGION", "us-east-1"),
+	cloudinaryService, err := cloudinary.NewCloudinaryService(
+		getEnv("CLOUDINARY_CLOUD_NAME", ""),
+		getEnv("CLOUDINARY_API_KEY", ""),
+		getEnv("CLOUDINARY_API_SECRET", ""),
+		getEnv("CLOUDINARY_FOLDER", "carzone/cars"),
 	)
 	if err != nil {
 		return
@@ -92,8 +106,8 @@ func cleanupOldImages(ctx context.Context, carID string, newImages []string) {
 
 	// Find images that are being removed (exist in old but not in new)
 	for _, oldImage := range oldImages {
-		if isS3URL(oldImage) && !contains(newImages, oldImage) {
-			s3Service.DeleteImage(ctx, oldImage)
+		if cloudinary.IsCloudinaryURL(oldImage) && !contains(newImages, oldImage) {
+			cloudinaryService.DeleteImage(ctx, oldImage)
 		}
 	}
 }
@@ -104,17 +118,19 @@ func DeleteCarImages(ctx context.Context, imageURLs []string) {
 		return
 	}
 
-	s3Service, err := s3.NewS3Service(
-		getEnv("AWS_S3_BUCKET_NAME", "carzone-images"),
-		getEnv("AWS_REGION", "us-east-1"),
+	cloudinaryService, err := cloudinary.NewCloudinaryService(
+		getEnv("CLOUDINARY_CLOUD_NAME", ""),
+		getEnv("CLOUDINARY_API_KEY", ""),
+		getEnv("CLOUDINARY_API_SECRET", ""),
+		getEnv("CLOUDINARY_FOLDER", "carzone/cars"),
 	)
 	if err != nil {
 		return
 	}
 
 	for _, imageURL := range imageURLs {
-		if isS3URL(imageURL) {
-			s3Service.DeleteImage(ctx, imageURL)
+		if cloudinary.IsCloudinaryURL(imageURL) {
+			cloudinaryService.DeleteImage(ctx, imageURL)
 		}
 	}
 }
@@ -137,11 +153,11 @@ func getEnv(key, defaultValue string) string {
 }
 
 func isURL(str string) bool {
-	return len(str) > 4 && (str[:4] == "http" || str[:5] == "https")
+	return strings.HasPrefix(str, "http://") || strings.HasPrefix(str, "https://")
 }
 
-func isS3URL(str string) bool {
-	return strings.Contains(str, "s3.amazonaws.com") || strings.Contains(str, ".s3.")
+func isCloudinaryURL(str string) bool {
+	return strings.Contains(str, "res.cloudinary.com")
 }
 
 func contains(slice []string, item string) bool {

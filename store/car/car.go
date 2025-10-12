@@ -207,9 +207,9 @@ func (s CarStore) CreateCar(ctx context.Context, carReq models.CarRequest) (mode
 	}()
 
 	query := `INSERT INTO car (id, owner_id, name, model, year, brand, fuel_type, engine, 
-	         location_city, location_state, location_country, price, status, 
+	         location_city, location_state, location_country, price, status,
 	         is_available, features, description, images, mileage, created_at, updated_at) 
-	         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+	         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 	         RETURNING id, owner_id, name, model, year, brand, fuel_type, engine, location_city, 
 	         location_state, location_country, price, status, is_available, 
 	         features, description, images, mileage, created_at, updated_at`
@@ -223,7 +223,8 @@ func (s CarStore) CreateCar(ctx context.Context, carReq models.CarRequest) (mode
 		featuresJSON, carReq.Description, images, carReq.Mileage, createdAt, updatedAt).Scan(
 		&createdCar.ID, &createdCar.OwnerID, &createdCar.Name, &createdCar.Model, &createdCar.Year,
 		&createdCar.Brand, &createdCar.FuelType, &returnedEngineJSON, &createdCar.LocationCity,
-		&createdCar.LocationState, &createdCar.LocationCountry, &returnedPriceJSON, &createdCar.Status, &createdCar.IsAvailable, &returnedFeaturesJSON,
+		&createdCar.LocationState, &createdCar.LocationCountry, &returnedPriceJSON, &createdCar.Status,
+		&createdCar.IsAvailable, &returnedFeaturesJSON,
 		&createdCar.Description, &returnedImages, &createdCar.Mileage, &createdCar.CreatedAt, &createdCar.UpdatedAt)
 
 	if err != nil {
@@ -276,10 +277,10 @@ func (s CarStore) UpdateCar(ctx context.Context, id string, carReq models.CarReq
 
 	query := `UPDATE car SET owner_id = $1, name = $2, model = $3, year = $4, brand = $5, fuel_type = $6, 
 	         engine = $7, location_city = $8, location_state = $9, location_country = $10, price = $11, 
-	         status = $12, is_available = $14, features = $15, description = $16, 
-	         images = $17, mileage = $18, updated_at = $19 WHERE id = $20 
+	         status = $12, is_available = $13, features = $14, description = $15, 
+	         images = $16, mileage = $17, updated_at = $18 WHERE id = $19 
 	         RETURNING id, owner_id, name, model, year, brand, fuel_type, engine, location_city, 
-	         location_state, location_country, price, status, availability_type, is_available, 
+	         location_state, location_country, price, status, is_available, 
 	         features, description, images, mileage, created_at, updated_at`
 
 	var returnedEngineJSON, returnedPriceJSON, returnedFeaturesJSON []byte
@@ -287,7 +288,7 @@ func (s CarStore) UpdateCar(ctx context.Context, id string, carReq models.CarReq
 
 	err = tx.QueryRowContext(ctx, query, carReq.OwnerID, carReq.Name, carReq.Model, carReq.Year,
 		carReq.Brand, carReq.FuelType, engineJSON, carReq.LocationCity, carReq.LocationState,
-		carReq.LocationCountry,carReq.Price, carReq.Status, carReq.IsAvailable,
+		carReq.LocationCountry, carReq.Price, carReq.Status, carReq.IsAvailable,
 		featuresJSON, carReq.Description, images, carReq.Mileage, time.Now(), id).Scan(
 		&updatedCar.ID, &updatedCar.OwnerID, &updatedCar.Name, &updatedCar.Model, &updatedCar.Year,
 		&updatedCar.Brand, &updatedCar.FuelType, &returnedEngineJSON, &updatedCar.LocationCity,

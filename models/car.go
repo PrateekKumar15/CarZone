@@ -19,7 +19,6 @@ type Engine struct {
 
 // Price represents the pricing information for a car rental
 
-
 // Car represents a vehicle entity in the CarZone rental and sales system
 // It contains all necessary information for rental management including
 // ownership, pricing, availability, and specifications
@@ -45,8 +44,8 @@ type Car struct {
 	Price float64 `json:"rental_price"` // Pricing information
 
 	// Status and availability
-	Status           string `json:"status"`            // active, maintenance, inactive
-	IsAvailable      bool   `json:"is_available"`      // Current availability status
+	Status      string `json:"status"`       // active, maintenance, inactive
+	IsAvailable bool   `json:"is_available"` // Current availability status
 
 	// Additional information
 	Features    map[string]interface{} `json:"features"`    // Car features as JSON (GPS, AC, etc.)
@@ -81,9 +80,8 @@ type CarRequest struct {
 	Price float64 `json:"rental_price"` // Pricing information
 
 	// Status and availability
-	Status           string `json:"status"`            // active, maintenance, inactive
-	AvailabilityType string `json:"availability_type"` // rental, sale, both
-	IsAvailable      bool   `json:"is_available"`      // Current availability
+	Status      string `json:"status"`       // active, maintenance, inactive
+	IsAvailable bool   `json:"is_available"` // Current availability
 
 	// Additional information
 	Features    map[string]interface{} `json:"features"`    // Car features as JSON
@@ -121,9 +119,6 @@ func ValidateRequest(carRequest CarRequest) error {
 		return err
 	}
 	if err := validateStatus(carRequest.Status); err != nil {
-		return err
-	}
-	if err := validateAvailabilityType(carRequest.AvailabilityType); err != nil {
 		return err
 	}
 	if err := validateMileage(carRequest.Mileage); err != nil {
@@ -253,14 +248,6 @@ func validateStatus(status string) error {
 		}
 	}
 	return errors.New("status must be one of: active, maintenance, inactive")
-}
-
-// validateAvailabilityType ensures the availability type is valid for rental-only platform
-func validateAvailabilityType(availabilityType string) error {
-	if availabilityType != "rental" {
-		return errors.New("availability type must be 'rental' for rental-only platform")
-	}
-	return nil
 }
 
 // validateMileage validates car mileage

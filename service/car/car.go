@@ -153,9 +153,6 @@ func (s *CarService) validateCarRequest(carReq models.CarRequest) error {
 	if carReq.Status == "" {
 		return errors.New("car status is required")
 	}
-	if carReq.AvailabilityType == "" {
-		return errors.New("availability type is required")
-	}
 
 	// Validate engine data
 	if carReq.Engine.EngineSize <= 0 {
@@ -172,7 +169,7 @@ func (s *CarService) validateCarRequest(carReq models.CarRequest) error {
 	}
 
 	// Validate price data (all cars are rental-only now)
-	if carReq.Price >= 0 {
+	if carReq.Price <= 0 {
 		return errors.New("rental price must be specified and greater than 0")
 	}
 

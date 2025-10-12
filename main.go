@@ -165,7 +165,7 @@ func main() {
 	log.Println("    POST /auth/login     - User authentication")
 	log.Println("    GET  /auth/logout    - User logout")
 	log.Println("")
-	log.Println("  🚗 Car Management (Protected):")
+	log.Println("   Car Management (Protected):")
 	log.Println("    GET    /cars           - Get all cars")
 	log.Println("    GET    /cars/{id}      - Get car by ID")
 	log.Println("    GET    /cars/brand     - Get cars by brand")

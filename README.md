@@ -7,7 +7,7 @@
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&logo=prometheus&logoColor=white)
 ![Jaeger](https://img.shields.io/badge/Jaeger-Tracing-66CFE8?style=for-the-badge&logo=jaeger&logoColor=white)
-![AWS S3](https://img.shields.io/badge/AWS_S3-569A31?style=for-the-badge&logo=amazons3&logoColor=white)
+![Cloudinary](https://img.shields.io/badge/Cloudinary-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white)
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/PrateekKumar15/CarZone)](https://goreportcard.com/report/github.com/PrateekKumar15/CarZone)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -33,7 +33,7 @@ CarZone is a comprehensive, production-ready car rental management platform back
 - **💳 Payment Integration** - Complete Razorpay integration with HMAC SHA256 signature verification
 - **📊 Full Observability** - Prometheus metrics, Jaeger distributed tracing, OpenTelemetry integration
 - **🐳 Production Ready** - Docker containerization, health checks, graceful shutdown, connection pooling
-- **☁️ Cloud Native** - AWS S3 integration for image storage, scalable architecture
+- **☁️ Cloud Native** - Cloudinary integration for image storage with automatic optimization and CDN delivery
 - **📈 High Performance** - Connection pooling, optimized queries, <300ms response times
 - **🧪 Battle Tested** - Comprehensive error handling, input validation, audit trails
 
@@ -42,16 +42,18 @@ CarZone is a comprehensive, production-ready car rental management platform back
 ## ✨ Features
 
 ### 🚗 **Car Management System**
+
 - Complete CRUD operations for car inventory management
 - Advanced search and filtering (by brand, model, price, fuel type, location)
 - Engine specifications with JSONB storage for flexibility
-- Multi-image upload support via AWS S3
+- Multi-image upload support via Cloudinary with automatic optimization
 - Real-time availability tracking
 - Status management (active, maintenance, inactive)
 - Location-based car listings
 - Mileage tracking and vehicle features
 
 ### 👥 **User Management & Authentication**
+
 - User registration and login with JWT token generation
 - Role-based access control (admin, owner, renter)
 - Secure password hashing with bcrypt
@@ -60,6 +62,7 @@ CarZone is a comprehensive, production-ready car rental management platform back
 - User phone and email verification ready
 
 ### 📅 **Booking Management**
+
 - Complete booking lifecycle (pending → confirmed → completed/cancelled)
 - Date conflict validation and overlap detection
 - Automated pricing calculations
@@ -69,6 +72,7 @@ CarZone is a comprehensive, production-ready car rental management platform back
 - Multi-status workflows with state validation
 
 ### 💰 **Payment Processing**
+
 - Razorpay payment gateway integration
 - Order creation and payment verification
 - HMAC SHA256 signature verification for security
@@ -79,6 +83,7 @@ CarZone is a comprehensive, production-ready car rental management platform back
 - Webhook handlers for async payment updates
 
 ### 🔐 **Security & Authentication**
+
 - JWT-based authentication with role-based authorization
 - Password encryption using bcrypt (cost factor 10)
 - SQL injection prevention via prepared statements
@@ -88,6 +93,7 @@ CarZone is a comprehensive, production-ready car rental management platform back
 - Secure payment signature verification
 
 ### 📊 **Monitoring & Observability**
+
 - **Prometheus Integration** - Custom business metrics and system health
 - **Jaeger Distributed Tracing** - Request tracing across all services
 - **OpenTelemetry** - Comprehensive telemetry framework
@@ -96,13 +102,15 @@ CarZone is a comprehensive, production-ready car rental management platform back
 - **Database Connection Monitoring** - Pool status and query performance
 
 ### ☁️ **Cloud Integration**
-- **AWS S3** - Car image storage and retrieval
-- **Multipart Upload** - Support for large image files
+
+- **Cloudinary** - Car image storage with CDN and automatic optimization
 - **Base64 Encoding** - Flexible image upload options
-- **CDN Ready** - S3 URLs for fast image delivery
-- **Image Optimization** - Automatic format and size handling
+- **Image Transformations** - On-the-fly image resizing, cropping, and optimization
+- **CDN Ready** - Cloudinary URLs for fast global image delivery
+- **Automatic Cleanup** - Images deleted when cars are removed
 
 ### 🏗️ **Technical Excellence**
+
 - **Clean Architecture** - Hexagonal architecture with ports & adapters
 - **Repository Pattern** - Data access abstraction layer
 - **Dependency Injection** - Loosely coupled, testable components
@@ -123,7 +131,7 @@ CarZone implements **hexagonal (ports & adapters) architecture** with clear boun
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        External World                           │
-│              (HTTP Clients, PostgreSQL, AWS S3)                 │
+│              (HTTP Clients, PostgreSQL, Cloudinary)                 │
 └────────────────────────┬────────────────────────────────────────┘
                          │
         ┌────────────────┼────────────────┐
@@ -161,21 +169,21 @@ CarZone implements **hexagonal (ports & adapters) architecture** with clear boun
           │              │              │
           ▼              ▼              ▼
   ┌──────────────┐ ┌─────────┐ ┌──────────┐
-  │  PostgreSQL  │ │  AWS S3 │ │ Razorpay │
+  │  PostgreSQL  │ │ Cloudinary │ │ Razorpay │
   │   Database   │ │ Storage │ │ Payment  │
   └──────────────┘ └─────────┘ └──────────┘
 ```
 
 ### 📦 **Layer Responsibilities**
 
-| Layer              | Responsibility                                      | Examples                                       |
-|--------------------|-----------------------------------------------------|------------------------------------------------|
-| **Handlers**       | HTTP request/response, routing, status codes        | `car.go`, `booking.go`, `payment.go`           |
-| **Middleware**     | Cross-cutting concerns, authentication, logging     | `auth_middleware`, `metrics_middleware`        |
-| **Services**       | Business logic, validation, orchestration           | Booking conflicts, payment verification        |
-| **Stores**         | Data persistence, queries, database operations      | PostgreSQL CRUD operations                     |
-| **Models**         | Domain entities, validation rules, contracts        | Car, Booking, Payment, User structures         |
-| **External APIs**  | Third-party integrations                            | Razorpay, AWS S3                               |
+| Layer             | Responsibility                                  | Examples                                |
+| ----------------- | ----------------------------------------------- | --------------------------------------- |
+| **Handlers**      | HTTP request/response, routing, status codes    | `car.go`, `booking.go`, `payment.go`    |
+| **Middleware**    | Cross-cutting concerns, authentication, logging | `auth_middleware`, `metrics_middleware` |
+| **Services**      | Business logic, validation, orchestration       | Booking conflicts, payment verification |
+| **Stores**        | Data persistence, queries, database operations  | PostgreSQL CRUD operations              |
+| **Models**        | Domain entities, validation rules, contracts    | Car, Booking, Payment, User structures  |
+| **External APIs** | Third-party integrations                        | Razorpay, Cloudinary                    |
 
 ### 🔄 **Request Flow Example**
 
@@ -226,8 +234,10 @@ CarZone/
 │   │   └── 📄 booking.go          # Booking validation, conflicts
 │   ├── 📁 payment/
 │   │   └── 📄 payment.go          # Payment verification, Razorpay
-│   └── 📁 s3/
-│       └── 📄 s3.go               # AWS S3 image operations
+│   ├── 📁 cloudinary/
+│   │   └── � cloudinary.go       # Cloudinary image operations
+│   └── �📁 s3/                    # Legacy S3 service (deprecated)
+│       └── 📄 s3.go               # AWS S3 image operations (not used)
 │
 ├── 📁 store/                       # Data access layer
 │   ├── 📄 interface.go            # Repository contracts
@@ -251,7 +261,7 @@ CarZone/
 │   ├── 📄 auth_middleware.go      # JWT authentication
 │   ├── 📄 cors_middleware.go      # CORS configuration
 │   ├── 📄 metrics_middleware.go   # Prometheus metrics
-│   └── 📄 image_upload_middleware.go # S3 image upload
+│   └── 📄 image_upload_middleware.go # Cloudinary image upload
 │
 ├── 📁 driver/                      # Infrastructure
 │   └── 📄 postgres.go             # PostgreSQL connection pool
@@ -269,15 +279,15 @@ CarZone/
 
 ### 📦 **Key Files Overview**
 
-| File/Directory | Purpose | Lines of Code |
-|----------------|---------|---------------|
-| `main.go` | Application bootstrapping, dependency injection | ~200 |
-| `handler/` | HTTP layer, request/response handling | ~1,500 |
-| `service/` | Business logic, validation, orchestration | ~2,000 |
-| `store/` | Database operations, queries | ~1,800 |
-| `models/` | Domain entities, validation | ~800 |
-| `middleware/` | Authentication, CORS, metrics, images | ~500 |
-| `routes/` | Route definitions and grouping | ~300 |
+| File/Directory | Purpose                                         | Lines of Code |
+| -------------- | ----------------------------------------------- | ------------- |
+| `main.go`      | Application bootstrapping, dependency injection | ~200          |
+| `handler/`     | HTTP layer, request/response handling           | ~1,500        |
+| `service/`     | Business logic, validation, orchestration       | ~2,000        |
+| `store/`       | Database operations, queries                    | ~1,800        |
+| `models/`      | Domain entities, validation                     | ~800          |
+| `middleware/`  | Authentication, CORS, metrics, images           | ~500          |
+| `routes/`      | Route definitions and grouping                  | ~300          |
 
 ---
 
@@ -285,46 +295,46 @@ CarZone/
 
 ### **Core Technologies**
 
-| Technology | Version | Purpose | Documentation |
-|------------|---------|---------|---------------|
-| **Go** | 1.24.3 | Primary programming language | [golang.org](https://golang.org) |
-| **Gorilla Mux** | 1.8.1 | HTTP router and URL matcher | [github.com/gorilla/mux](https://github.com/gorilla/mux) |
-| **PostgreSQL** | 13+ | Primary relational database | [postgresql.org](https://www.postgresql.org) |
-| **lib/pq** | 1.10.9 | PostgreSQL driver for Go | [github.com/lib/pq](https://github.com/lib/pq) |
+| Technology      | Version | Purpose                      | Documentation                                            |
+| --------------- | ------- | ---------------------------- | -------------------------------------------------------- |
+| **Go**          | 1.24.3  | Primary programming language | [golang.org](https://golang.org)                         |
+| **Gorilla Mux** | 1.8.1   | HTTP router and URL matcher  | [github.com/gorilla/mux](https://github.com/gorilla/mux) |
+| **PostgreSQL**  | 13+     | Primary relational database  | [postgresql.org](https://www.postgresql.org)             |
+| **lib/pq**      | 1.10.9  | PostgreSQL driver for Go     | [github.com/lib/pq](https://github.com/lib/pq)           |
 
 ### **Authentication & Security**
 
-| Package | Purpose |
-|---------|---------|
-| **JWT (dgrijalva/jwt-go)** | Token-based authentication |
-| **golang.org/x/crypto** | bcrypt password hashing |
-| **CORS Middleware** | Cross-origin resource sharing |
-| **Input Validation** | Request sanitization and validation |
+| Package                    | Purpose                             |
+| -------------------------- | ----------------------------------- |
+| **JWT (dgrijalva/jwt-go)** | Token-based authentication          |
+| **golang.org/x/crypto**    | bcrypt password hashing             |
+| **CORS Middleware**        | Cross-origin resource sharing       |
+| **Input Validation**       | Request sanitization and validation |
 
 ### **Cloud & External Services**
 
-| Service | Purpose | SDK Version |
-|---------|---------|-------------|
-| **AWS S3** | Image storage and retrieval | aws-sdk-go-v2 v1.38.3 |
-| **Razorpay** | Payment gateway integration | REST API |
+| Service        | Purpose                     | SDK Version           |
+| -------------- | --------------------------- | --------------------- |
+| **Cloudinary** | Image storage with CDN      | cloudinary-go v2.13.0 |
+| **Razorpay**   | Payment gateway integration | REST API              |
 
 ### **Observability & Monitoring**
 
-| Tool | Purpose | Port/Endpoint |
-|------|---------|---------------|
-| **Prometheus** | Metrics collection and monitoring | `:9090`, `/metrics` |
-| **Jaeger** | Distributed request tracing | `:16686` |
-| **OpenTelemetry** | Telemetry framework | - |
-| **Health Checks** | Service health monitoring | `/health` |
+| Tool              | Purpose                           | Port/Endpoint       |
+| ----------------- | --------------------------------- | ------------------- |
+| **Prometheus**    | Metrics collection and monitoring | `:9090`, `/metrics` |
+| **Jaeger**        | Distributed request tracing       | `:16686`            |
+| **OpenTelemetry** | Telemetry framework               | -                   |
+| **Health Checks** | Service health monitoring         | `/health`           |
 
 ### **Development & Deployment**
 
-| Tool | Purpose |
-|------|---------|
-| **Docker** | Application containerization |
-| **Docker Compose** | Multi-service orchestration |
-| **godotenv** | Environment variable management |
-| **Git** | Version control system |
+| Tool               | Purpose                         |
+| ------------------ | ------------------------------- |
+| **Docker**         | Application containerization    |
+| **Docker Compose** | Multi-service orchestration     |
+| **godotenv**       | Environment variable management |
+| **Git**            | Version control system          |
 
 ### **Architecture Patterns**
 
@@ -347,7 +357,7 @@ Ensure you have the following installed on your system:
 - **Docker & Docker Compose** - [Install Docker](https://docs.docker.com/get-docker/)
 - **Git** - [Install Git](https://git-scm.com/downloads)
 - **PostgreSQL 13+** (optional if using Docker)
-- **AWS Account** (for S3 image storage)
+- **Cloudinary Account** (for image storage - free tier available)
 - **Razorpay Account** (for payment processing)
 
 ### **Installation**
@@ -390,11 +400,11 @@ SERVER_HOST=0.0.0.0
 SECRET_KEY=your_jwt_secret_key_min_32_characters_long
 JWT_EXPIRY_HOURS=24
 
-# AWS S3 Configuration
-AWS_ACCESS_KEY_ID=your_aws_access_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret_key
-AWS_REGION=us-east-1
-AWS_S3_BUCKET_NAME=carzone-images
+# Cloudinary Configuration (Image Storage)
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+CLOUDINARY_FOLDER=carzone/cars
 
 # Razorpay Configuration
 RAZORPAY_KEY_ID=your_razorpay_key_id
@@ -459,6 +469,7 @@ open http://localhost:16686
 ---
 
 ## ⚙️ Configuration
+
 ---
 
 ## ⚙️ Configuration
@@ -469,44 +480,46 @@ CarZone uses environment variables for configuration following the **12-factor a
 
 #### **Required Variables**
 
-| Variable | Description | Example | Required |
-|----------|-------------|---------|----------|
-| `DB_HOST` | PostgreSQL host address | `localhost` | ✅ |
-| `DB_PORT` | PostgreSQL port | `5432` | ✅ |
-| `DB_USER` | Database username | `carzone_user` | ✅ |
-| `DB_PASSWORD` | Database password | `your_password` | ✅ |
-| `DB_NAME` | Database name | `carzone_db` | ✅ |
-| `SECRET_KEY` | JWT signing secret (min 32 chars) | `your_secret_key...` | ✅ |
-| `RAZORPAY_KEY_ID` | Razorpay API key ID | `rzp_test_xxxxx` | ✅ |
-| `RAZORPAY_KEY_SECRET` | Razorpay API secret | `your_secret` | ✅ |
+| Variable              | Description                       | Example              | Required |
+| --------------------- | --------------------------------- | -------------------- | -------- |
+| `DB_HOST`             | PostgreSQL host address           | `localhost`          | ✅       |
+| `DB_PORT`             | PostgreSQL port                   | `5432`               | ✅       |
+| `DB_USER`             | Database username                 | `carzone_user`       | ✅       |
+| `DB_PASSWORD`         | Database password                 | `your_password`      | ✅       |
+| `DB_NAME`             | Database name                     | `carzone_db`         | ✅       |
+| `SECRET_KEY`          | JWT signing secret (min 32 chars) | `your_secret_key...` | ✅       |
+| `RAZORPAY_KEY_ID`     | Razorpay API key ID               | `rzp_test_xxxxx`     | ✅       |
+| `RAZORPAY_KEY_SECRET` | Razorpay API secret               | `your_secret`        | ✅       |
 
 #### **Optional Variables**
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `SERVER_PORT` | HTTP server port | `8080` | ❌ |
-| `SERVER_HOST` | Server bind address | `0.0.0.0` | ❌ |
-| `DB_SSLMODE` | PostgreSQL SSL mode | `disable` | ❌ |
-| `JWT_EXPIRY_HOURS` | JWT token expiry time | `24` | ❌ |
-| `LOG_LEVEL` | Logging level | `info` | ❌ |
-| `ENVIRONMENT` | Application environment | `development` | ❌ |
+| Variable           | Description             | Default       | Required |
+| ------------------ | ----------------------- | ------------- | -------- |
+| `SERVER_PORT`      | HTTP server port        | `8080`        | ❌       |
+| `SERVER_HOST`      | Server bind address     | `0.0.0.0`     | ❌       |
+| `DB_SSLMODE`       | PostgreSQL SSL mode     | `disable`     | ❌       |
+| `JWT_EXPIRY_HOURS` | JWT token expiry time   | `24`          | ❌       |
+| `LOG_LEVEL`        | Logging level           | `info`        | ❌       |
+| `ENVIRONMENT`      | Application environment | `development` | ❌       |
 
-#### **AWS S3 Configuration** (for image uploads)
+#### **Cloudinary Configuration** (for image uploads)
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `AWS_ACCESS_KEY_ID` | AWS access key | ✅ |
-| `AWS_SECRET_ACCESS_KEY` | AWS secret key | ✅ |
-| `AWS_REGION` | AWS region | ✅ |
-| `AWS_S3_BUCKET_NAME` | S3 bucket name | ✅ |
+| Variable                | Description               | Required |
+| ----------------------- | ------------------------- | -------- |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name     | ✅       |
+| `CLOUDINARY_API_KEY`    | Cloudinary API key        | ✅       |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret     | ✅       |
+| `CLOUDINARY_FOLDER`     | Folder path in Cloudinary | ❌       |
+
+> **Note**: Get your Cloudinary credentials from the [Cloudinary Console](https://console.cloudinary.com/)
 
 #### **Monitoring Configuration**
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `JAEGER_AGENT_HOST` | Jaeger agent host | `localhost` |
-| `JAEGER_AGENT_PORT` | Jaeger agent port | `4318` |
-| `PROMETHEUS_PORT` | Prometheus server port | `9090` |
+| Variable            | Description            | Default     |
+| ------------------- | ---------------------- | ----------- |
+| `JAEGER_AGENT_HOST` | Jaeger agent host      | `localhost` |
+| `JAEGER_AGENT_PORT` | Jaeger agent port      | `4318`      |
+| `PROMETHEUS_PORT`   | Prometheus server port | `9090`      |
 
 ### **Configuration Best Practices**
 
@@ -515,7 +528,7 @@ CarZone uses environment variables for configuration following the **12-factor a
 - ✅ Rotate `RAZORPAY_KEY_SECRET` and `AWS_SECRET_ACCESS_KEY` regularly
 - ✅ Use different credentials for development, staging, and production
 - ✅ Enable SSL/TLS in production (`DB_SSLMODE=require`)
-- ✅ Use environment-specific S3 buckets
+- ✅ Use environment-specific Cloudinary folders
 - ✅ Store sensitive variables in secret management systems (AWS Secrets Manager, HashiCorp Vault)
 
 ---
@@ -539,16 +552,16 @@ Authorization: Bearer <your_jwt_token>
 
 ### **HTTP Status Codes**
 
-| Code | Status | Description |
-|------|--------|-------------|
-| `200` | OK | Request successful |
-| `201` | Created | Resource created successfully |
-| `400` | Bad Request | Invalid request data or parameters |
-| `401` | Unauthorized | Missing or invalid authentication token |
-| `403` | Forbidden | Insufficient permissions |
-| `404` | Not Found | Resource not found |
-| `409` | Conflict | Resource conflict (e.g., booking overlap) |
-| `500` | Internal Server Error | Server error |
+| Code  | Status                | Description                               |
+| ----- | --------------------- | ----------------------------------------- |
+| `200` | OK                    | Request successful                        |
+| `201` | Created               | Resource created successfully             |
+| `400` | Bad Request           | Invalid request data or parameters        |
+| `401` | Unauthorized          | Missing or invalid authentication token   |
+| `403` | Forbidden             | Insufficient permissions                  |
+| `404` | Not Found             | Resource not found                        |
+| `409` | Conflict              | Resource conflict (e.g., booking overlap) |
+| `500` | Internal Server Error | Server error                              |
 
 ### **Error Response Format**
 
@@ -686,8 +699,8 @@ Authorization: Bearer <token>
       "backup_camera": true
     },
     "images": [
-      "https://carzone-images.s3.amazonaws.com/car1-1.jpg",
-      "https://carzone-images.s3.amazonaws.com/car1-2.jpg"
+      "https://res.cloudinary.com/demo/image/upload/carzone/cars/car1-1.jpg",
+      "https://res.cloudinary.com/demo/image/upload/carzone/cars/car1-2.jpg"
     ],
     "mileage": 15000,
     "created_at": "2024-01-15T10:30:00Z",
@@ -704,6 +717,7 @@ Authorization: Bearer <token>
 ```
 
 **Parameters:**
+
 - `id` (path, required) - UUID of the car
 
 **Response:** `200 OK` - Same structure as above
@@ -716,6 +730,7 @@ Authorization: Bearer <token>
 ```
 
 **Parameters:**
+
 - `brand` (path, required) - Car brand name (e.g., "Tesla", "Toyota")
 
 **Response:** `200 OK` - Array of cars
@@ -728,6 +743,7 @@ Authorization: Bearer <token>
 ```
 
 **Query Parameters:**
+
 - `city` (optional) - Filter by city
 - `state` (optional) - Filter by state
 
@@ -766,10 +782,7 @@ Content-Type: application/json
     "autopilot": true
   },
   "description": "Brand new Tesla Model 3 with full self-driving capability",
-  "images": [
-    "base64_encoded_image_1",
-    "base64_encoded_image_2"
-  ]
+  "images": ["base64_encoded_image_1", "base64_encoded_image_2"]
 }
 ```
 
@@ -922,6 +935,7 @@ Content-Type: application/json
 ```
 
 **Valid Status Transitions:**
+
 - `pending` → `confirmed` | `cancelled`
 - `confirmed` → `completed` | `cancelled`
 - `completed` → (terminal state)
@@ -1163,9 +1177,9 @@ curl -X GET http://localhost:8080/bookings/{booking-uuid} \
 
 ```yaml
 services:
-  app:        # Go API application
-  db:         # PostgreSQL database
-  jaeger:     # Distributed tracing
+  app: # Go API application
+  db: # PostgreSQL database
+  jaeger: # Distributed tracing
   prometheus: # Metrics monitoring
 ```
 
@@ -1187,12 +1201,12 @@ docker-compose up --build
 
 ### **Service Endpoints**
 
-| Service | Port | URL |
-|---------|------|-----|
-| **API** | 8080 | http://localhost:8080 |
-| **PostgreSQL** | 5432 | localhost:5432 |
-| **Jaeger UI** | 16686 | http://localhost:16686 |
-| **Prometheus** | 9090 | http://localhost:9090 |
+| Service        | Port  | URL                    |
+| -------------- | ----- | ---------------------- |
+| **API**        | 8080  | http://localhost:8080  |
+| **PostgreSQL** | 5432  | localhost:5432         |
+| **Jaeger UI**  | 16686 | http://localhost:16686 |
+| **Prometheus** | 9090  | http://localhost:9090  |
 
 ### **Docker Commands**
 
@@ -1238,11 +1252,13 @@ For production deployment, consider:
 CarZone exposes custom business metrics:
 
 **HTTP Metrics:**
+
 - `api_requests_total` - Total API requests by method, path, status
 - `api_request_duration_seconds` - Request latency histogram
 - `api_requests_in_flight` - Currently processing requests
 
 **Business Metrics:**
+
 - `bookings_total` - Total bookings by status
 - `bookings_revenue_total` - Total revenue from bookings
 - `cars_available_total` - Currently available cars
@@ -1250,6 +1266,7 @@ CarZone exposes custom business metrics:
 - `payments_total` - Total payments by status
 
 **Database Metrics:**
+
 - `database_connections_active` - Active DB connections
 - `database_connections_idle` - Idle DB connections
 - `database_queries_total` - Total queries executed
@@ -1266,6 +1283,7 @@ Access Jaeger UI at `http://localhost:16686` to:
 - Track error propagation
 
 **Trace Example:**
+
 ```
 HTTP Request → Auth Middleware → Handler → Service → Store → Database
              ↓                    ↓           ↓         ↓        ↓
@@ -1288,12 +1306,12 @@ watch -n 5 'curl -s http://localhost:8080/health | jq'
 
 ### **Tables Overview**
 
-| Table | Purpose | Key Fields |
-|-------|---------|------------|
-| `users` | User accounts and authentication | id, email, password_hash, role |
-| `car` | Vehicle inventory | id, owner_id, brand, model, price, images |
-| `booking` | Rental bookings | id, customer_id, car_id, status, dates |
-| `payment` | Payment transactions | id, booking_id, amount, status, razorpay_ids |
+| Table     | Purpose                          | Key Fields                                   |
+| --------- | -------------------------------- | -------------------------------------------- |
+| `users`   | User accounts and authentication | id, email, password_hash, role               |
+| `car`     | Vehicle inventory                | id, owner_id, brand, model, price, images    |
+| `booking` | Rental bookings                  | id, customer_id, car_id, status, dates       |
+| `payment` | Payment transactions             | id, booking_id, amount, status, razorpay_ids |
 
 ### **Key Relationships**
 
@@ -1355,12 +1373,12 @@ psql -U carzone_user -d carzone_db -f migrations/migration_rental_only.sql
 
 ### **Performance Metrics**
 
-| Metric | Target | Achieved |
-|--------|--------|----------|
-| API Response Time | <500ms | ~300ms |
-| Database Query Time | <100ms | ~50ms |
-| Concurrent Users | 1000+ | ✅ |
-| API Uptime | 99.9% | ✅ |
+| Metric              | Target | Achieved |
+| ------------------- | ------ | -------- |
+| API Response Time   | <500ms | ~300ms   |
+| Database Query Time | <100ms | ~50ms    |
+| Concurrent Users    | 1000+  | ✅       |
+| API Uptime          | 99.9%  | ✅       |
 
 ---
 
@@ -1412,7 +1430,7 @@ CarZone/
 - **[API Documentation](API_Documentation.md)** - Complete API reference with examples
 - **[Payment Integration](PAYMENT_INTEGRATION_SUMMARY.md)** - Razorpay integration guide
 - **[Development Roadmap](DEVELOPMENT_ROADMAP.md)** - Feature roadmap and future plans
-- **[S3 Image Upload Guide](S3_IMAGE_UPLOAD_GUIDE.md)** - AWS S3 integration details
+- **[Cloudinary Image Upload Guide](CLOUDINARY_IMAGE_UPLOAD_GUIDE.md)** - Cloudinary integration details
 - **[Image Cleanup Guide](IMAGE_CLEANUP_GUIDE.md)** - Image management best practices
 
 ---
@@ -1476,7 +1494,7 @@ copies or substantial portions of the Software.
 
 ## 👥 Authors & Maintainers
 
-- **Prateek Kumar** - *Initial work* - [PrateekKumar15](https://github.com/PrateekKumar15)
+- **Prateek Kumar** - _Initial work_ - [PrateekKumar15](https://github.com/PrateekKumar15)
 
 ---
 
